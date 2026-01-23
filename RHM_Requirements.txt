@@ -1,0 +1,33 @@
+Prompt for Rental House Management Web App (RHM)
+
+•	To track the income and expenditure of all my rental houses located in Tamil Nadu, India.
+•	There are a total of 11 rental houses at present. I need an option to easily add and remove houses.
+Basic Details of House
+•	RHM app should include details of the current and past tenants
+•	Also the app should provide details about each house like house number, EB service number,motor service number,  type size and address of house
+•	Include Google Map location of each rental house
+
+Rental Income from House
+•	Date and amount of the advance received for current tenant should be displayed for each house
+•	Past details also to be maintained
+•	Rent amount for each house, date to be paid, notification after 1 week of due date
+•	Option to update when and how much of the rent is paid  with date and pending amount to be paid
+•	All the consolidated pending amount should be displayed for each tenant when viewed individually
+•	Due rents notification should be at the top of the web page one week after the due date
+•	The notification should disappear only after the entire monthly rent is paid
+
+Expenses for House
+•	The current status of expenses 
+o	EB  Bill – Once in two months
+o	House tax – Once in a year
+•	Due dates of these expenses should be included at the top of the web app one week before the due date
+•	Check status of EB bill button should be present for each house. If the button is pressed the app should direct me to the follwing website https://www.tnebnet.org/awp/login?locale=ta
+•	Need an option to add Motor bill. Motor bill amount should be divided among the houses having the same motor service number and should be added to the upcoming rent for each house
+•	Need an option to add Water bill for selected houses. Water bill bill amount should be divided among all the selected houses equally and should be added to the upcoming rent.
+
+Maintenance Expense Details of House
+•	RHM app should include an option for entering miscellaneous expenses for selected house with amount, description and date, house (mulitple option can be selected).
+o	This amount should be added to the upcoming rent of the house
+•	The accumulated details should be displayed when each house is viewed
+•	RHM app should include an option for entering common miscellaneous expenses for selected  houses with amount, description and date
+o	This amount should be equally divided among the selected houses for the upcoming rent
