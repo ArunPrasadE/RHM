@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+frontend/dist/
+
+# Database
+backend/database/*.db
+backend/database/backups/
+
+# Environment (keep .env.example, ignore actual .env in production)
+# .env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Lock files (optional - uncomment if you want to track them)
+# package-lock.json
