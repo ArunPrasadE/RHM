@@ -1,0 +1,114 @@
+# RHM (Rental House Management) - Dependencies
+# =============================================
+# Note: This is a Node.js project. Dependencies are managed via package.json
+# and installed using `npm install`. This file is for documentation purposes.
+
+# ===================
+# SYSTEM REQUIREMENTS
+# ===================
+# Node.js >= 18.0.0
+# npm (comes with Node.js)
+#
+# For Production:
+# PM2   - Install with: sudo npm install -g pm2
+# Nginx - Install with: sudo apt install nginx
+
+# ===================
+# BACKEND DEPENDENCIES (backend/package.json)
+# ===================
+# Install: cd backend && npm install
+
+# Runtime Dependencies:
+bcrypt@^5.1.1              # Password hashing
+better-sqlite3@^9.4.3      # SQLite database driver
+cors@^2.8.5                # Cross-Origin Resource Sharing
+dotenv@^16.4.1             # Environment variables
+express@^4.18.2            # Web framework
+googleapis@^131.0.0        # Google Drive API for backups
+jsonwebtoken@^9.0.2        # JWT authentication
+jspdf@^2.5.1               # PDF generation
+jspdf-autotable@^3.8.1     # PDF table generation
+
+# ===================
+# FRONTEND DEPENDENCIES (frontend/package.json)
+# ===================
+# Install: cd frontend && npm install
+
+# Runtime Dependencies:
+react@^18.2.0              # React library
+react-dom@^18.2.0          # React DOM rendering
+react-router-dom@^6.22.0   # Client-side routing
+
+# Dev Dependencies:
+@types/react@^18.2.48      # TypeScript types for React
+@types/react-dom@^18.2.18  # TypeScript types for React DOM
+@vitejs/plugin-react@^4.2.1 # Vite React plugin
+autoprefixer@^10.4.17      # CSS autoprefixer
+postcss@^8.4.33            # CSS processing
+tailwindcss@^3.4.1         # Utility-first CSS framework
+vite@^5.0.12               # Build tool and dev server
+
+# ===================
+# INSTALLATION COMMANDS
+# ===================
+# Run these commands in order:
+#
+# 1. Create database directory (required before first run):
+#      mkdir -p /home/pi/RHM/backend/database
+#
+# 2. Install backend dependencies:
+#      cd /home/pi/RHM/backend && npm install
+#
+# 3. Install frontend dependencies:
+#      cd /home/pi/RHM/frontend && npm install
+
+# ===================
+# QUICK START (Recommended)
+# ===================
+# Install everything:
+#      ./install.sh
+#
+# Start both servers:
+#      ./start.sh
+
+# ===================
+# MANUAL START COMMANDS
+# ===================
+# Development:
+#   Backend:  cd backend && npm run dev     # Runs on port 3001
+#   Frontend: cd frontend && npm run dev    # Runs on port 5173
+
+# ===================
+# PRODUCTION DEPLOYMENT
+# ===================
+# 1. Install production dependencies (one-time):
+#      sudo apt install nginx
+#      sudo npm install -g pm2
+#
+# 2. Deploy to production:
+#      ./start-prod.sh
+#
+#    This will:
+#    - Build frontend static files to frontend/dist/
+#    - Configure nginx to serve frontend & proxy API
+#    - Start backend with PM2 process manager
+#
+# 3. Enable auto-start on system boot:
+#      pm2 save
+#      pm2 startup
+#      sudo systemctl enable nginx
+#
+# Architecture:
+#   User → Nginx (port 80) → Static files (frontend)
+#                          → Backend API (port 3001) for /api/*
+#
+# PM2 Commands:
+#   pm2 status              # Check process status
+#   pm2 logs rhm-backend    # View logs
+#   pm2 restart rhm-backend # Restart backend
+#   pm2 stop rhm-backend    # Stop backend
+#
+# Nginx Commands:
+#   sudo systemctl status nginx   # Check status
+#   sudo systemctl restart nginx  # Restart nginx
+#   sudo nginx -t                 # Test configuration
