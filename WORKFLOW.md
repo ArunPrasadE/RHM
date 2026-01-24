@@ -10,10 +10,13 @@ Guide for managing development and production environments with Git branches.
 main branch (production) ←── feature branches (development)
       ↓
    PM2 + Nginx (running)
+      ↓
+   Tailscale (remote access)
 ```
 
 - **main**: Production-ready code, deployed on server
 - **feature branches**: Development work, testing locally
+- **Tailscale**: Secure remote access from anywhere
 
 ---
 
@@ -113,6 +116,14 @@ git merge <branch>          # Merge branch into current
 git push origin <branch>    # Push to remote
 ```
 
+### Tailscale
+```bash
+tailscale status            # Check connection status
+tailscale ip -4             # Get Tailscale IP
+sudo tailscale up           # Connect/reconnect
+sudo systemctl restart tailscaled  # Restart Tailscale service
+```
+
 ---
 
 ## Common Scenarios
@@ -162,9 +173,69 @@ git push origin main --force
 
 ---
 
-## Environment Ports
+## Environment Ports & Access URLs
 
-| Environment | Frontend | Backend |
-|-------------|----------|---------|
-| Development | 5173 | 3001 |
-| Production | 80 (nginx) | 3001 (proxied via /api/) |
+| Environment | Frontend | Backend | Access From |
+|-------------|----------|---------|-------------|
+| Development | localhost:5173 | localhost:3001 | Local only |
+| Production (LAN) | 192.168.31.253 | 192.168.31.253/api | Home network |
+| Production (Tailscale) | 100.95.218.115 | 100.95.218.115/api | Anywhere |
+
+---
+
+## Remote Access with Tailscale
+
+Tailscale provides secure access to the app from anywhere without exposing your home network.
+
+### How It Works
+```
+Your Device (Tailscale) ←→ Mesh VPN ←→ Raspberry Pi (Tailscale)
+                                              ↓
+                                      Nginx → Backend
+```
+
+### Access URLs
+- **From home network**: http://192.168.31.253
+- **From anywhere (Tailscale)**: http://100.95.218.115
+
+### Tailscale Commands
+```bash
+# Check Tailscale status
+tailscale status
+
+# Get Tailscale IP
+tailscale ip -4
+
+# Reconnect if disconnected
+sudo tailscale up
+
+# Check if Tailscale is running
+sudo systemctl status tailscaled
+```
+
+### Accessing from MacBook
+1. Ensure Tailscale is running on MacBook (check menu bar icon)
+2. Open browser: http://100.95.218.115
+3. Login with admin credentials
+
+### Troubleshooting Remote Access
+
+**Can't connect via Tailscale:**
+```bash
+# On Raspberry Pi, check Tailscale status
+tailscale status
+
+# Restart Tailscale if needed
+sudo systemctl restart tailscaled
+sudo tailscale up
+```
+
+**Tailscale connected but app not loading:**
+```bash
+# Check if production server is running
+pm2 status
+sudo systemctl status nginx
+
+# Restart if needed
+./start-prod.sh
+```
