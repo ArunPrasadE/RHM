@@ -109,14 +109,18 @@ export default function TenantForm({ houseId, tenant, onSave, onClose }) {
             </div>
 
             <div>
-              <label className="label">Move-in Date *</label>
+              <label className="label">Move-in Date {!tenant && '*'}</label>
               <input
                 type="date"
                 value={formData.move_in_date}
                 onChange={(e) => setFormData({ ...formData, move_in_date: e.target.value })}
-                className="input"
-                required
+                className={`input ${tenant ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                required={!tenant}
+                disabled={!!tenant}
               />
+              {tenant && (
+                <p className="text-xs text-gray-500 mt-1">Move-in date cannot be changed</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
