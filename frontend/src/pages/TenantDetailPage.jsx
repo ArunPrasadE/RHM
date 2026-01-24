@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { formatCurrency, formatDate, generateWhatsAppLink } from '../utils/api';
 import PaymentForm from '../components/Payments/PaymentForm';
+import TenantForm from '../components/Tenants/TenantForm';
 
 export default function TenantDetailPage() {
   const { id } = useParams();
@@ -10,6 +11,7 @@ export default function TenantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showMoveOutConfirm, setShowMoveOutConfirm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   useEffect(() => {
     fetchTenant();
@@ -47,6 +49,16 @@ export default function TenantDetailPage() {
       });
       fetchTenant();
       setShowMoveOutConfirm(false);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleUpdateTenant = async (tenantData) => {
+    try {
+      await api.put(`/tenants/${id}`, tenantData);
+      fetchTenant();
+      setShowEditForm(false);
     } catch (error) {
       alert(error.message);
     }
@@ -104,6 +116,15 @@ Thank you.`;
         <span className={`badge ${tenant.is_current ? 'badge-success' : 'badge-info'}`}>
           {tenant.is_current ? 'Current Tenant' : 'Past Tenant'}
         </span>
+        <button
+          onClick={() => setShowEditForm(true)}
+          className="ml-auto btn btn-secondary text-sm flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+          Edit Tenant
+        </button>
       </div>
 
       {/* Pending Amount Alert */}
@@ -309,6 +330,15 @@ Thank you.`;
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tenant Edit Form Modal */}
+      {showEditForm && (
+        <TenantForm
+          tenant={tenant}
+          onSave={handleUpdateTenant}
+          onClose={() => setShowEditForm(false)}
+        />
       )}
     </div>
   );

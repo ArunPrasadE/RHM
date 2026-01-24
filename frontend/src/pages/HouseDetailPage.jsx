@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api, { formatCurrency, formatDate } from '../utils/api';
 import TenantForm from '../components/Tenants/TenantForm';
+import HouseForm from '../components/Houses/HouseForm';
 
 export default function HouseDetailPage() {
   const { id } = useParams();
   const [house, setHouse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showTenantForm, setShowTenantForm] = useState(false);
+  const [showHouseForm, setShowHouseForm] = useState(false);
 
   useEffect(() => {
     fetchHouse();
@@ -29,6 +31,16 @@ export default function HouseDetailPage() {
       await api.post('/tenants', { ...tenantData, house_id: parseInt(id) });
       fetchHouse();
       setShowTenantForm(false);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleUpdateHouse = async (houseData) => {
+    try {
+      await api.put(`/houses/${id}`, houseData);
+      fetchHouse();
+      setShowHouseForm(false);
     } catch (error) {
       alert(error.message);
     }
@@ -65,6 +77,15 @@ export default function HouseDetailPage() {
         <span className={`badge ${house.has_tenant ? 'badge-success' : 'badge-warning'}`}>
           {house.has_tenant ? 'Occupied' : 'Vacant'}
         </span>
+        <button
+          onClick={() => setShowHouseForm(true)}
+          className="ml-auto btn btn-secondary text-sm flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+          Edit House
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -223,6 +244,15 @@ export default function HouseDetailPage() {
           houseId={parseInt(id)}
           onSave={handleAddTenant}
           onClose={() => setShowTenantForm(false)}
+        />
+      )}
+
+      {/* House Edit Form Modal */}
+      {showHouseForm && (
+        <HouseForm
+          house={house}
+          onSave={handleUpdateHouse}
+          onClose={() => setShowHouseForm(false)}
         />
       )}
     </div>
