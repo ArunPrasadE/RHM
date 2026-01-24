@@ -13,7 +13,7 @@ echo "================================"
 echo ""
 
 # Step 1: Build frontend
-echo "[1/3] Building frontend..."
+echo "[1/4] Building frontend..."
 cd "$SCRIPT_DIR/frontend"
 npm run build
 echo "      Done! Static files in frontend/dist/"
@@ -36,10 +36,10 @@ else
     echo "      Nginx already configured."
 fi
 
-# Test nginx config
+# Test and start/restart nginx
 sudo nginx -t
-sudo systemctl reload nginx
-echo "      Nginx reloaded!"
+sudo systemctl restart nginx
+echo "      Nginx started!"
 echo ""
 
 # Step 4: Start backend with PM2
