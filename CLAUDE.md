@@ -4,57 +4,105 @@
 
 RHM (Rental House Management) is a self-hosted web application for managing 11 rental houses in Tamil Nadu, India. Single admin user with JWT authentication, responsive mobile-first design.
 
+**Current Status:** Production-ready, deployed on Raspberry Pi with remote access via Tailscale.
+
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite + Tailwind CSS (port 5173)
-- **Backend**: Node.js + Express.js (port 3001)
+- **Frontend**: React 18 + Vite + Tailwind CSS
+- **Backend**: Node.js + Express.js
 - **Database**: SQLite with better-sqlite3
 - **Auth**: JWT + bcrypt
 - **PDF**: jsPDF + jspdf-autotable
 - **Backup**: Google Drive API
+- **Production Server**: Nginx (reverse proxy) + PM2 (process manager)
+- **Remote Access**: Tailscale (mesh VPN)
 
 ## Project Structure
 
 ```
-/mnt/d/RHM_App/
-├── backend/           # Express.js API server
+/home/pi/RHM/
+├── install.sh          # Install all dependencies
+├── start.sh            # Start development servers
+├── start-prod.sh       # Deploy to production
+├── requirements.txt    # Dependencies documentation
+├── SETUP.md            # Setup guide
+├── WORKFLOW.md         # Development workflow guide
+├── CLAUDE.md           # This file
+├── backend/
 │   ├── src/
-│   │   ├── index.js   # Server entry point
-│   │   ├── config/    # Database setup
-│   │   ├── middleware/# JWT auth
-│   │   ├── routes/    # API endpoints
-│   │   └── utils/     # Helpers (PDF, WhatsApp, notifications)
-│   └── database/      # SQLite database file
-├── frontend/          # React SPA
-│   └── src/
-│       ├── components/# Reusable UI components
-│       ├── pages/     # Route pages
-│       ├── context/   # React context (AuthContext)
-│       ├── hooks/     # Custom hooks
-│       └── utils/     # API client, formatters
-└── README.md
+│   │   ├── index.js    # Server entry point
+│   │   ├── config/     # Database setup
+│   │   ├── middleware/ # JWT auth
+│   │   ├── routes/     # API endpoints
+│   │   └── utils/      # Helpers (PDF, WhatsApp, notifications)
+│   ├── database/       # SQLite database file (gitignored)
+│   ├── package.json
+│   └── .env            # Environment config
+├── frontend/
+│   ├── src/
+│   │   ├── components/ # Reusable UI components
+│   │   ├── pages/      # Route pages
+│   │   ├── context/    # React context (AuthContext)
+│   │   ├── hooks/      # Custom hooks
+│   │   └── utils/      # API client, formatters
+│   ├── dist/           # Production build (generated)
+│   └── package.json
+└── nginx/
+    └── rhm.conf        # Nginx configuration
 ```
 
 ## Quick Commands
 
+### Installation
 ```bash
-# Install dependencies
-cd backend && npm install
-cd frontend && npm install
-
-# Development
-cd backend && npm run dev    # Backend on :3001
-cd frontend && npm run dev   # Frontend on :5173
-
-# Production build
-cd frontend && npm run build
-cd backend && NODE_ENV=production npm start
+./install.sh            # Install all dependencies
 ```
+
+### Development
+```bash
+./start.sh              # Start both servers (frontend :5173, backend :3001)
+```
+
+### Production
+```bash
+./start-prod.sh         # Build and deploy to production
+pm2 stop rhm-backend    # Stop backend
+pm2 restart rhm-backend # Restart backend
+sudo systemctl stop nginx   # Stop nginx
+sudo systemctl restart nginx # Restart nginx
+```
+
+### Tailscale
+```bash
+tailscale status        # Check connection
+tailscale ip -4         # Get Tailscale IP
+sudo tailscale up       # Reconnect
+```
+
+## Access URLs
+
+| Environment | URL | Access From |
+|-------------|-----|-------------|
+| Development | http://localhost:5173 | Local only |
+| Production (LAN) | http://192.168.31.253 | Home network |
+| Production (Tailscale) | http://100.95.218.115 | Anywhere |
 
 ## Default Login
 
 - Username: `admin`
 - Password: `admin123`
+
+## Current Data Status
+
+| Table | Records |
+|-------|---------|
+| Houses | 11 |
+| Tenants | 11 |
+| Rent Payments | 11 |
+| Expenses | 0 |
+| Maintenance | 0 |
+
+**Note:** Database files (`*.db`) are gitignored and not tracked by version control.
 
 ## Key Business Logic
 
@@ -73,13 +121,19 @@ cd backend && NODE_ENV=production npm start
 - `motor_bill` - Shared motor connection
 - `water_bill` - Shared water connection
 
-## Database Tables
+## Database
 
-Main tables: `users`, `houses`, `tenants`, `rent_payments`, `expenses`, `maintenance_expenses`, `maintenance_expense_houses`, `rent_additions`, `backup_log`
+### Tables
+`users`, `houses`, `tenants`, `rent_payments`, `expenses`, `maintenance_expenses`, `maintenance_expense_houses`, `rent_additions`, `backup_log`
 
-## API Base URL
+### Files (gitignored)
+- `backend/database/rhm.db` - Production database
+- `backend/database/rhm_test.db` - Test database
+- `backend/database/backups/` - Backup files
 
-Development: `http://localhost:3001/api`
+## API Endpoints
+
+Base URL: `/api`
 
 All endpoints except `/auth/login` require `Authorization: Bearer <token>` header.
 
@@ -89,7 +143,48 @@ All endpoints except `/auth/login` require `Authorization: Bearer <token>` heade
 - `backend/src/config/db.js` - Database schema and initialization
 - `frontend/src/utils/api.js` - API client with auth handling
 - `frontend/src/context/AuthContext.jsx` - Authentication state
+- `nginx/rhm.conf` - Nginx reverse proxy configuration
 
-## Deployment Target
+## Deployment
 
-Raspberry Pi with Cloudflare Tunnel for remote access. Use PM2 for process management.
+### Target Platform
+- Raspberry Pi 3 Model B
+- Raspbian Bookworm (Linux)
+- Node.js v18.20.4
+
+### Production Architecture
+```
+Internet/Tailscale → Nginx (port 80)
+                        ├── /* → Static files (frontend/dist)
+                        └── /api/* → Backend (port 3001) → SQLite
+```
+
+### Remote Access
+- **Tailscale**: Mesh VPN for secure access from anywhere
+- Tailscale IP: `100.95.218.115`
+- No port forwarding required
+- Works from any network
+
+### Process Management
+- **PM2**: Keeps backend running, auto-restart on crash
+- **Nginx**: Serves frontend, proxies API requests
+- **systemd**: Auto-start services on boot
+
+### Auto-Start on Boot
+```bash
+pm2 save
+pm2 startup
+sudo systemctl enable nginx
+```
+
+## Documentation
+
+- `SETUP.md` - Complete setup guide for development and production
+- `WORKFLOW.md` - Git workflow and Tailscale remote access
+- `requirements.txt` - All dependencies and installation steps
+
+## Git Branches
+
+- `main` - Production-ready code
+- `internet-access` - Remote access features (Tailscale)
+- `remote-access` - Earlier remote access work
