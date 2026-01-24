@@ -95,6 +95,91 @@ Press `Ctrl+C` in each terminal.
 
 ---
 
+## Test Environment (Isolated Database)
+
+Use this when testing new features on a separate branch without affecting production data.
+
+### Why Separate Environments?
+
+When you run both production and test servers, they can share the same database by default. This means changes in your test environment will affect production data. To avoid this, run the test server with a **separate database file**.
+
+### Environment Summary
+
+| Environment | Backend Port | Frontend Port | Database | Access URL |
+|-------------|--------------|---------------|----------|------------|
+| Production  | 3001         | 80 (nginx)    | `rhm.db` | `http://<ip>` |
+| Test        | 3002         | 5174          | `rhm_test.db` | `http://<ip>:5174` |
+
+### Step 1: Create a Test Database
+
+**Option A: Start fresh (empty database)**
+```bash
+# The server auto-creates a new database with default admin user
+# Just start the server with the new DB_PATH (Step 2)
+```
+
+**Option B: Copy production data for testing**
+```bash
+cp /home/pi/RHM/backend/database/rhm.db /home/pi/RHM/backend/database/rhm_test.db
+```
+
+### Step 2: Start Test Backend (Terminal 1)
+
+```bash
+cd /home/pi/RHM/backend
+PORT=3002 DB_PATH=./database/rhm_test.db npm run dev
+```
+
+### Step 3: Start Test Frontend (Terminal 2)
+
+```bash
+cd /home/pi/RHM/frontend
+VITE_API_PORT=3002 npm run dev -- --port 5174 --host
+```
+
+### Step 4: Access Test Environment
+
+Open in browser: `http://<raspberry-pi-ip>:5174`
+
+**Important:** Access via port 5174 directly, NOT through nginx (port 80). Nginx always routes to production.
+
+### Verify Correct Environment
+
+Check which database a backend is using:
+```bash
+# Production (should show rhm.db)
+curl http://localhost:3001/api/health
+
+# Test (should show rhm_test.db)
+curl http://localhost:3002/api/health
+```
+
+### Architecture (Test vs Production)
+
+```
+PRODUCTION:
+Browser → Nginx (80) → Static Files + API proxy → Backend (3001) → rhm.db
+
+TEST:
+Browser → Vite Dev Server (5174) → API proxy → Backend (3002) → rhm_test.db
+```
+
+### Quick Reference Commands
+
+```bash
+# Start production (main branch)
+cd /home/pi/RHM && ./start-prod.sh
+
+# Start test environment (feature branch)
+# Terminal 1:
+cd /home/pi/RHM/backend && PORT=3002 DB_PATH=./database/rhm_test.db npm run dev
+
+# Terminal 2:
+cd /home/pi/RHM/frontend && VITE_API_PORT=3002 npm run dev -- --port 5174 --host
+```
+
+---
+
 ## Production Environment
 
 Use this for deployment on Raspberry Pi.
@@ -268,7 +353,9 @@ Browser → Nginx (80)
 ├── CLAUDE.md           # Project context
 ├── backend/
 │   ├── src/            # Backend source code
-│   ├── database/       # SQLite database
+│   ├── database/       # SQLite databases
+│   │   ├── rhm.db      # Production database
+│   │   └── rhm_test.db # Test database (isolated)
 │   ├── package.json    # Backend dependencies
 │   └── .env            # Environment config
 ├── frontend/
