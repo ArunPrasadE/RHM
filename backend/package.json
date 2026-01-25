@@ -18,7 +18,8 @@
     "googleapis": "^131.0.0",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.1"
+    "jspdf-autotable": "^3.8.1",
+    "node-cron": "^4.2.1"
   },
   "engines": {
     "node": ">=18.0.0"

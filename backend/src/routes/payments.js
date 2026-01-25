@@ -1,6 +1,7 @@
 import express from 'express';
 import db from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { generateMissingRentRecords } from '../utils/scheduler.js';
 
 const router = express.Router();
 
@@ -315,6 +316,22 @@ router.post('/generate-monthly', (req, res) => {
   } catch (error) {
     console.error('Error generating monthly payments:', error);
     res.status(500).json({ error: 'Failed to generate monthly payments' });
+  }
+});
+
+// POST /api/payments/backfill-missing - Manually trigger backfill of missing rent records
+router.post('/backfill-missing', (req, res) => {
+  try {
+    const result = generateMissingRentRecords();
+    res.json({
+      message: 'Backfill complete',
+      created: result.created,
+      skipped: result.skipped,
+      tenantsProcessed: result.tenants
+    });
+  } catch (error) {
+    console.error('Error during backfill:', error);
+    res.status(500).json({ error: 'Failed to backfill missing rent records' });
   }
 });
 

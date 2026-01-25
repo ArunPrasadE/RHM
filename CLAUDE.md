@@ -110,6 +110,22 @@ sudo tailscale up       # Reconnect
 - Rent is due on the 10th of each month
 - Overdue notifications show 7 days AFTER due date (17th onwards)
 
+### New Tenant Rent Calculation
+- First rent is always due **next month** after move-in (not move-in month)
+- If move-in date is **after 15th**: First rent = **half amount**
+- If move-in date is **on or before 15th**: First rent = **full amount**
+- Subsequent months are always full rent
+
+### Rent Payment Scheduler
+- Cron job runs on **1st of every month at 00:05 AM IST**
+- Automatically generates rent payment records for all current tenants
+- Backfills missing records on server startup
+- Located in `backend/src/utils/scheduler.js`
+
+### Tenant Management
+- **Move Out**: Marks tenant as past tenant, preserves all records
+- **Delete**: Permanently removes tenant and all related payment records
+
 ### Bill Splitting
 - **Motor bill**: Auto-splits among houses with same `motor_service_number`
 - **Water bill**: User selects houses, amount splits equally
