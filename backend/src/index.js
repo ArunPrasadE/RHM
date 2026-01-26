@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import db, { initializeDatabase } from './config/db.js';
+import { initializeScheduler } from './utils/scheduler.js';
 import authRoutes from './routes/auth.js';
 import housesRoutes from './routes/houses.js';
 import tenantsRoutes from './routes/tenants.js';
@@ -30,6 +31,9 @@ app.use(express.json());
 
 // Initialize database
 initializeDatabase();
+
+// Initialize scheduler for automatic rent record generation
+initializeScheduler();
 
 // API Routes
 app.use('/api/auth', authRoutes);

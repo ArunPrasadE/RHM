@@ -11,6 +11,7 @@ export default function TenantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showMoveOutConfirm, setShowMoveOutConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
 
   useEffect(() => {
@@ -49,6 +50,15 @@ export default function TenantDetailPage() {
       });
       fetchTenant();
       setShowMoveOutConfirm(false);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/tenants/${id}`);
+      navigate('/tenants');
     } catch (error) {
       alert(error.message);
     }
@@ -228,6 +238,13 @@ Thank you.`;
               Move Out Tenant
             </button>
           )}
+
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="mt-2 w-full btn bg-gray-600 text-white hover:bg-gray-700"
+          >
+            Delete Tenant
+          </button>
         </div>
 
         {/* Payment History */}
@@ -326,6 +343,38 @@ Thank you.`;
                 className="flex-1 btn btn-danger"
               >
                 Confirm Move Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4 text-red-600">Permanently Delete Tenant</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to permanently delete <strong>{tenant.name}</strong>?
+            </p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-red-800 text-sm font-medium">This action cannot be undone!</p>
+              <p className="text-red-700 text-sm mt-1">
+                All payment history and records for this tenant will be permanently removed.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 btn bg-red-600 text-white hover:bg-red-700"
+              >
+                Delete Permanently
               </button>
             </div>
           </div>

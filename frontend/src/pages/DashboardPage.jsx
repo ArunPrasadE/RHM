@@ -23,7 +23,7 @@ export default function DashboardPage() {
       const currentMonth = new Date().toISOString().slice(0, 7);
 
       const monthlyPayments = paymentsData.filter(p => p.due_date.startsWith(currentMonth));
-      const collected = monthlyPayments.reduce((sum, p) => sum + p.paid_amount, 0);
+      const currentMonthPending = monthlyPayments.reduce((sum, p) => sum + (p.due_amount - p.paid_amount), 0);
       const totalDue = monthlyPayments.reduce((sum, p) => sum + p.due_amount, 0);
       const totalPending = paymentsData.reduce((sum, p) => sum + (p.due_amount - p.paid_amount), 0);
       const overduePayments = paymentsData.filter(p => p.days_overdue >= 7);
@@ -32,7 +32,7 @@ export default function DashboardPage() {
         totalHouses: housesData.length,
         occupiedHouses,
         vacantHouses: housesData.length - occupiedHouses,
-        currentMonthCollected: collected,
+        currentMonthPending,
         currentMonthDue: totalDue,
         totalPending,
         overdueCount: overduePayments.length
@@ -74,9 +74,8 @@ export default function DashboardPage() {
           color="green"
         />
         <StatCard
-          title="This Month"
-          value={formatCurrency(stats?.currentMonthCollected || 0)}
-          subtitle={`of ${formatCurrency(stats?.currentMonthDue || 0)}`}
+          title="This Month Pending"
+          value={formatCurrency(stats?.currentMonthPending || 0)}
           icon={MoneyIcon}
           color="amber"
         />

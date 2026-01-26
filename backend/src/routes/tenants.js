@@ -125,19 +125,24 @@ router.post('/', (req, res) => {
       WHERE t.id = ?
     `).get(result.lastInsertRowid);
 
-    // Create first rent payment record for the move-in month
+    // Only create rent payment if due date is current month or earlier (not future)
     const moveInDate = new Date(move_in_date);
-    const dueDate = new Date(moveInDate.getFullYear(), moveInDate.getMonth(), 10);
+    const dueDate = new Date(moveInDate.getFullYear(), moveInDate.getMonth() + 1, 10);
+    const now = new Date();
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
 
-    // If move-in is after the 10th, due date is next month
-    if (moveInDate.getDate() > 10) {
-      dueDate.setMonth(dueDate.getMonth() + 1);
+    if (dueDate <= currentMonthEnd) {
+      // If move-in is after 15th, first month rent is half
+      const firstRentAmount = moveInDate.getDate() > 15
+        ? Math.round(house.rent_amount / 2)
+        : house.rent_amount;
+
+      db.prepare(`
+        INSERT INTO rent_payments (tenant_id, house_id, due_date, due_amount)
+        VALUES (?, ?, ?, ?)
+      `).run(newTenant.id, house_id, dueDate.toISOString().split('T')[0], firstRentAmount);
     }
-
-    db.prepare(`
-      INSERT INTO rent_payments (tenant_id, house_id, due_date, due_amount)
-      VALUES (?, ?, ?, ?)
-    `).run(newTenant.id, house_id, dueDate.toISOString().split('T')[0], house.rent_amount);
+    // Future rent payments will be created by the scheduler on the 1st of each month
 
     res.status(201).json(newTenant);
   } catch (error) {
@@ -191,6 +196,37 @@ router.put('/:id', (req, res) => {
   } catch (error) {
     console.error('Error updating tenant:', error);
     res.status(500).json({ error: 'Failed to update tenant' });
+  }
+});
+
+// DELETE /api/tenants/:id - Permanently delete tenant and all records
+router.delete('/:id', (req, res) => {
+  try {
+    const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(req.params.id);
+
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    // Delete in order: rent_additions -> rent_payments -> tenant
+    // First get all rent payment IDs for this tenant
+    const paymentIds = db.prepare('SELECT id FROM rent_payments WHERE tenant_id = ?').all(req.params.id);
+
+    // Delete rent additions for these payments
+    for (const payment of paymentIds) {
+      db.prepare('DELETE FROM rent_additions WHERE rent_payment_id = ?').run(payment.id);
+    }
+
+    // Delete rent payments
+    db.prepare('DELETE FROM rent_payments WHERE tenant_id = ?').run(req.params.id);
+
+    // Delete tenant
+    db.prepare('DELETE FROM tenants WHERE id = ?').run(req.params.id);
+
+    res.json({ message: 'Tenant and all related records permanently deleted' });
+  } catch (error) {
+    console.error('Error deleting tenant:', error);
+    res.status(500).json({ error: 'Failed to delete tenant' });
   }
 });
 

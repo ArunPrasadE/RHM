@@ -13,21 +13,21 @@ echo "================================"
 echo ""
 
 # Step 1: Build frontend
-echo "[1/4] Building frontend..."
+echo "[1/5] Building frontend..."
 cd "$SCRIPT_DIR/frontend"
 npm run build
 echo "      Done! Static files in frontend/dist/"
 echo ""
 
 # Step 2: Fix permissions for nginx
-echo "[2/4] Setting permissions..."
+echo "[2/5] Setting permissions..."
 chmod 755 /home/pi
 chmod -R 755 "$SCRIPT_DIR/frontend/dist"
 echo "      Done!"
 echo ""
 
 # Step 3: Configure nginx
-echo "[3/4] Configuring nginx..."
+echo "[3/5] Configuring nginx..."
 if [ ! -L /etc/nginx/sites-enabled/rhm.conf ]; then
     sudo ln -sf "$SCRIPT_DIR/nginx/rhm.conf" /etc/nginx/sites-enabled/rhm.conf
     sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
@@ -42,8 +42,15 @@ sudo systemctl restart nginx
 echo "      Nginx started!"
 echo ""
 
-# Step 4: Start backend with PM2
-echo "[4/4] Starting backend with PM2..."
+# Step 4: Start Tailscale for remote access
+echo "[4/5] Starting Tailscale for remote access..."
+sudo tailscale up
+TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Not available")
+echo "      Tailscale IP: $TAILSCALE_IP"
+echo ""
+
+# Step 5: Start backend with PM2
+echo "[5/5] Starting backend with PM2..."
 cd "$SCRIPT_DIR/backend"
 
 # Stop existing instance if running
@@ -57,7 +64,11 @@ echo "================================"
 echo "Production deployment complete!"
 echo "================================"
 echo ""
-echo "Application: http://localhost"
+echo "Access URLs:"
+echo "  Local:     http://localhost"
+echo "  LAN:       http://192.168.31.253"
+echo "  Tailscale: http://$TAILSCALE_IP"
+echo ""
 echo "API Backend: http://localhost:3001 (proxied via /api/)"
 echo ""
 echo "PM2 Commands:"
