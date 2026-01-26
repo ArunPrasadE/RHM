@@ -31,6 +31,14 @@ export function generateMissingRentRecords() {
 
     // Loop from first due date to current month
     while (dueDate <= currentMonth) {
+      // Only create records for months where the cron job would have already run
+      // (i.e., the 1st of that month has passed)
+      const cronRunDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), 1);
+      if (now < cronRunDate) {
+        // Skip - cron job hasn't run yet for this month, let it handle the record
+        break;
+      }
+
       const dueDateStr = dueDate.toISOString().split('T')[0];
       const yearMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
 
