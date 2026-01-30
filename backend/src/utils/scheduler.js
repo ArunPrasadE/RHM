@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import db from '../config/db.js';
+import { backupToGoogleDrive } from '../routes/backup.js';
 
 /**
  * Generate missing rent records for all current tenants
@@ -130,12 +131,53 @@ export function generateCurrentMonthRent() {
 }
 
 /**
+ * Perform scheduled Google Drive backup
+ * Logs success/failure to console and backup_log table
+ */
+async function performScheduledGoogleDriveBackup() {
+  console.log('[Scheduler] Running monthly Google Drive backup...');
+
+  // Check if Google Drive is configured
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+  if (!serviceAccountEmail || !privateKey || !folderId) {
+    console.log('[Scheduler] Google Drive backup skipped - not configured');
+    return;
+  }
+
+  try {
+    const result = await backupToGoogleDrive();
+
+    if (result.success) {
+      console.log(`[Scheduler] Google Drive backup complete: ${result.fileName} (ID: ${result.googleDriveId})`);
+    } else {
+      console.error(`[Scheduler] Google Drive backup failed: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('[Scheduler] Error during Google Drive backup:', error);
+
+    // Log failed backup to database
+    try {
+      db.prepare(`
+        INSERT INTO backup_log (status, file_name)
+        VALUES ('failed', ?)
+      `).run(`Scheduled backup error: ${error.message}`);
+    } catch (dbError) {
+      console.error('[Scheduler] Failed to log backup error to database:', dbError);
+    }
+  }
+}
+
+/**
  * Initialize the scheduler
  * - Runs backfill immediately on startup
- * - Sets up monthly cron job for 1st of every month at 00:05
+ * - Sets up monthly cron job for 1st of every month at 00:05 AM (rent records)
+ * - Sets up monthly cron job for 1st of every month at 02:00 AM (Google Drive backup)
  */
 export function initializeScheduler() {
-  console.log('[Scheduler] Initializing rent record scheduler...');
+  console.log('[Scheduler] Initializing scheduler...');
 
   // Run backfill immediately on startup
   try {
@@ -145,7 +187,7 @@ export function initializeScheduler() {
     console.error('[Scheduler] Error during startup backfill:', error);
   }
 
-  // Schedule monthly job: 1st of every month at 00:05 AM
+  // Schedule monthly rent job: 1st of every month at 00:05 AM
   // Cron format: minute hour day-of-month month day-of-week
   cron.schedule('5 0 1 * *', () => {
     console.log('[Scheduler] Running monthly rent record generation...');
@@ -159,5 +201,15 @@ export function initializeScheduler() {
     timezone: 'Asia/Kolkata' // Indian Standard Time
   });
 
-  console.log('[Scheduler] Cron job scheduled: 1st of every month at 00:05 AM IST');
+  console.log('[Scheduler] Rent cron job scheduled: 1st of every month at 00:05 AM IST');
+
+  // Schedule monthly Google Drive backup: 1st of every month at 02:00 AM
+  // 2 AM avoids conflict with rent generation at 00:05 AM
+  cron.schedule('0 2 1 * *', () => {
+    performScheduledGoogleDriveBackup();
+  }, {
+    timezone: 'Asia/Kolkata' // Indian Standard Time
+  });
+
+  console.log('[Scheduler] Google Drive backup cron job scheduled: 1st of every month at 02:00 AM IST');
 }

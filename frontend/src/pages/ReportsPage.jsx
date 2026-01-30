@@ -72,7 +72,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Reports</h1>
 
       {/* Yearly Summary */}
       <div className="card">
@@ -91,21 +91,21 @@ export default function ReportsPage() {
 
         {summary && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-green-50 rounded-lg p-4">
-              <p className="text-sm text-green-600">Total Income</p>
-              <p className="text-2xl font-bold text-green-700">{formatCurrency(summary.totalIncome)}</p>
+            <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-4">
+              <p className="text-sm text-green-600 dark:text-green-400">Total Income</p>
+              <p className="text-2xl font-bold text-green-700 dark:text-green-300">{formatCurrency(summary.totalIncome)}</p>
             </div>
-            <div className="bg-red-50 rounded-lg p-4">
-              <p className="text-sm text-red-600">Total Expenses</p>
-              <p className="text-2xl font-bold text-red-700">{formatCurrency(summary.totalExpenses)}</p>
+            <div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-4">
+              <p className="text-sm text-red-600 dark:text-red-400">Total Expenses</p>
+              <p className="text-2xl font-bold text-red-700 dark:text-red-300">{formatCurrency(summary.totalExpenses)}</p>
             </div>
-            <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-blue-600">Net Profit</p>
-              <p className="text-2xl font-bold text-blue-700">{formatCurrency(summary.netProfit)}</p>
+            <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
+              <p className="text-sm text-blue-600 dark:text-blue-400">Net Profit</p>
+              <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{formatCurrency(summary.netProfit)}</p>
             </div>
-            <div className="bg-amber-50 rounded-lg p-4">
-              <p className="text-sm text-amber-600">Pending Rent</p>
-              <p className="text-2xl font-bold text-amber-700">{formatCurrency(summary.pendingRent)}</p>
+            <div className="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-4">
+              <p className="text-sm text-amber-600 dark:text-amber-400">Pending Rent</p>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{formatCurrency(summary.pendingRent)}</p>
             </div>
           </div>
         )}
@@ -139,10 +139,10 @@ export default function ReportsPage() {
         <h2 className="text-lg font-semibold mb-4">House Reports</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {houses.map((house) => (
-            <div key={house.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div key={house.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div>
                 <p className="font-medium">{house.house_number}</p>
-                <p className="text-sm text-gray-500">{house.type || 'House'}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{house.type || 'House'}</p>
               </div>
               <button
                 onClick={() => downloadReport('house', house.id, house.house_number)}
@@ -161,10 +161,10 @@ export default function ReportsPage() {
         <h2 className="text-lg font-semibold mb-4">Tenant Reports</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tenants.map((tenant) => (
-            <div key={tenant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div key={tenant.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div>
                 <p className="font-medium">{tenant.name}</p>
-                <p className="text-sm text-gray-500">{tenant.house_number}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{tenant.house_number}</p>
               </div>
               <button
                 onClick={() => downloadReport('tenant', tenant.id, tenant.name)}
@@ -177,7 +177,7 @@ export default function ReportsPage() {
           ))}
 
           {tenants.length === 0 && (
-            <p className="col-span-full text-center text-gray-500 py-4">
+            <p className="col-span-full text-center text-gray-500 dark:text-gray-400 py-4">
               No current tenants
             </p>
           )}

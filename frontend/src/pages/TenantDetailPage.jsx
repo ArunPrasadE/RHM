@@ -104,7 +104,7 @@ Thank you.`;
   if (!tenant) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Tenant not found</p>
+        <p className="text-gray-500 dark:text-gray-400">Tenant not found</p>
         <Link to="/tenants" className="text-primary-500 hover:underline mt-2 inline-block">
           Back to Tenants
         </Link>
@@ -117,12 +117,12 @@ Thank you.`;
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/tenants" className="text-gray-500 hover:text-gray-700">
+        <Link to="/tenants" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{tenant.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{tenant.name}</h1>
         <span className={`badge ${tenant.is_current ? 'badge-success' : 'badge-info'}`}>
           {tenant.is_current ? 'Current Tenant' : 'Past Tenant'}
         </span>
@@ -139,10 +139,10 @@ Thank you.`;
 
       {/* Pending Amount Alert */}
       {tenant.totalPending > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center justify-between">
           <div>
-            <p className="text-red-800 font-medium">Pending Amount</p>
-            <p className="text-2xl font-bold text-red-600">{formatCurrency(tenant.totalPending)}</p>
+            <p className="text-red-800 dark:text-red-300 font-medium">Pending Amount</p>
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(tenant.totalPending)}</p>
           </div>
           <div className="flex gap-2">
             {whatsAppLink && (
@@ -174,11 +174,11 @@ Thank you.`;
           <h2 className="text-lg font-semibold mb-4">Tenant Details</h2>
           <dl className="space-y-3">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Name</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Name</dt>
               <dd className="font-medium">{tenant.name}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Phone</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Phone</dt>
               <dd className="font-medium">
                 {tenant.phone ? (
                   <a href={`tel:${tenant.phone}`} className="text-primary-500 hover:underline">
@@ -188,41 +188,41 @@ Thank you.`;
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">ID Proof</dt>
+              <dt className="text-gray-500 dark:text-gray-400">ID Proof</dt>
               <dd className="font-medium">{tenant.id_proof_number || '-'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Occupation</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Occupation</dt>
               <dd className="font-medium">{tenant.occupation || '-'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Members</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Members</dt>
               <dd className="font-medium">{tenant.household_members || '-'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Move-in</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Move-in</dt>
               <dd className="font-medium">{formatDate(tenant.move_in_date)}</dd>
             </div>
             {tenant.move_out_date && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">Move-out</dt>
+                <dt className="text-gray-500 dark:text-gray-400">Move-out</dt>
                 <dd className="font-medium">{formatDate(tenant.move_out_date)}</dd>
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-gray-500">Advance</dt>
-              <dd className="font-medium text-green-600">{formatCurrency(tenant.advance_amount)}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Advance</dt>
+              <dd className="font-medium text-green-600 dark:text-green-400">{formatCurrency(tenant.advance_amount)}</dd>
             </div>
           </dl>
 
-          <div className="mt-4 pt-4 border-t">
+          <div className="mt-4 pt-4 border-t dark:border-gray-700">
             <Link
               to={`/houses/${tenant.house_id}`}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <div>
                 <p className="font-medium">{tenant.house_number}</p>
-                <p className="text-sm text-gray-500">{formatCurrency(tenant.current_rent)}/month</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{formatCurrency(tenant.current_rent)}/month</p>
               </div>
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -265,7 +265,7 @@ Thank you.`;
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b">
+                  <tr className="text-left text-sm text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
                     <th className="pb-3">Due Date</th>
                     <th className="pb-3">Due Amount</th>
                     <th className="pb-3">Paid</th>
@@ -275,12 +275,12 @@ Thank you.`;
                 </thead>
                 <tbody>
                   {tenant.payments.map((payment) => (
-                    <tr key={payment.id} className="border-b last:border-0">
+                    <tr key={payment.id} className="border-b dark:border-gray-700 last:border-0">
                       <td className="py-3">{formatDate(payment.due_date)}</td>
                       <td className="py-3">
                         {formatCurrency(payment.due_amount)}
                         {payment.additions?.length > 0 && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
                             {payment.additions.map((a, i) => (
                               <span key={i} className="block">
                                 +{formatCurrency(a.amount)} ({a.source_type.replace('_', ' ')})
@@ -302,7 +302,7 @@ Thank you.`;
               </table>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No payment records</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No payment records</p>
           )}
         </div>
       </div>
@@ -319,14 +319,14 @@ Thank you.`;
       {/* Move Out Confirmation Modal */}
       {showMoveOutConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold mb-4">Confirm Move Out</h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               Are you sure you want to mark {tenant.name} as moved out?
             </p>
             {tenant.totalPending > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                <p className="text-amber-800 text-sm">
+              <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
+                <p className="text-amber-800 dark:text-amber-300 text-sm">
                   This tenant has pending dues of {formatCurrency(tenant.totalPending)}
                 </p>
               </div>
@@ -352,14 +352,14 @@ Thank you.`;
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4 text-red-600">Permanently Delete Tenant</h3>
-            <p className="text-gray-600 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">Permanently Delete Tenant</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               Are you sure you want to permanently delete <strong>{tenant.name}</strong>?
             </p>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-              <p className="text-red-800 text-sm font-medium">This action cannot be undone!</p>
-              <p className="text-red-700 text-sm mt-1">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
+              <p className="text-red-800 dark:text-red-300 text-sm font-medium">This action cannot be undone!</p>
+              <p className="text-red-700 dark:text-red-400 text-sm mt-1">
                 All payment history and records for this tenant will be permanently removed.
               </p>
             </div>

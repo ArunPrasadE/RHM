@@ -23,7 +23,7 @@ export default function Sidebar({ open, onClose }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-16 left-0 bottom-0 w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed top-16 left-0 bottom-0 w-64 bg-white dark:bg-gray-800 shadow-lg z-50 transform transition-transform duration-300 md:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -36,8 +36,8 @@ export default function Sidebar({ open, onClose }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-primary-50 text-primary-600'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                 }`
               }
             >
