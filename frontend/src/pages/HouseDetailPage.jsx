@@ -57,7 +57,7 @@ export default function HouseDetailPage() {
   if (!house) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">House not found</p>
+        <p className="text-gray-500 dark:text-gray-400">House not found</p>
         <Link to="/houses" className="text-primary-500 hover:underline mt-2 inline-block">
           Back to Houses
         </Link>
@@ -68,12 +68,12 @@ export default function HouseDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/houses" className="text-gray-500 hover:text-gray-700">
+        <Link to="/houses" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">House {house.house_number}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">House {house.house_number}</h1>
         <span className={`badge ${house.has_tenant ? 'badge-success' : 'badge-warning'}`}>
           {house.has_tenant ? 'Occupied' : 'Vacant'}
         </span>
@@ -94,35 +94,35 @@ export default function HouseDetailPage() {
           <h2 className="text-lg font-semibold mb-4">House Details</h2>
           <dl className="space-y-3">
             <div className="flex justify-between">
-              <dt className="text-gray-500">House Number</dt>
+              <dt className="text-gray-500 dark:text-gray-400">House Number</dt>
               <dd className="font-medium">{house.house_number}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Type</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Type</dt>
               <dd className="font-medium">{house.type || '-'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Size</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Size</dt>
               <dd className="font-medium">{house.size_sqft ? `${house.size_sqft} sq.ft` : '-'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Rent Amount</dt>
-              <dd className="font-medium text-green-600">{formatCurrency(house.rent_amount)}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Rent Amount</dt>
+              <dd className="font-medium text-green-600 dark:text-green-400">{formatCurrency(house.rent_amount)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">EB Service No.</dt>
+              <dt className="text-gray-500 dark:text-gray-400">EB Service No.</dt>
               <dd className="font-medium">{house.eb_service_number || '-'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Motor Service No.</dt>
+              <dt className="text-gray-500 dark:text-gray-400">Motor Service No.</dt>
               <dd className="font-medium">{house.motor_service_number || '-'}</dd>
             </div>
           </dl>
 
           {house.address && (
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-500 mb-1">Address</p>
-              <p className="text-gray-700">{house.address}</p>
+            <div className="mt-4 pt-4 border-t dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Address</p>
+              <p className="text-gray-700 dark:text-gray-300">{house.address}</p>
             </div>
           )}
 
@@ -162,7 +162,7 @@ export default function HouseDetailPage() {
                 <div>
                   <h3 className="text-xl font-semibold">{house.currentTenant.name}</h3>
                   {house.currentTenant.phone && (
-                    <p className="text-gray-500">{house.currentTenant.phone}</p>
+                    <p className="text-gray-500 dark:text-gray-400">{house.currentTenant.phone}</p>
                   )}
                 </div>
                 <Link
@@ -175,26 +175,26 @@ export default function HouseDetailPage() {
 
               <dl className="grid grid-cols-2 gap-4">
                 <div>
-                  <dt className="text-sm text-gray-500">Move-in Date</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">Move-in Date</dt>
                   <dd className="font-medium">{formatDate(house.currentTenant.move_in_date)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Advance</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">Advance</dt>
                   <dd className="font-medium">{formatCurrency(house.currentTenant.advance_amount)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Occupation</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">Occupation</dt>
                   <dd className="font-medium">{house.currentTenant.occupation || '-'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Household Members</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">Household Members</dt>
                   <dd className="font-medium">{house.currentTenant.household_members || '-'}</dd>
                 </div>
               </dl>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <svg className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <p>No current tenant</p>
@@ -209,7 +209,7 @@ export default function HouseDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b">
+                  <tr className="text-left text-sm text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
                     <th className="pb-3">Type</th>
                     <th className="pb-3">Amount</th>
                     <th className="pb-3">Due Date</th>
@@ -218,7 +218,7 @@ export default function HouseDetailPage() {
                 </thead>
                 <tbody>
                   {house.recentExpenses.map((expense) => (
-                    <tr key={expense.id} className="border-b last:border-0">
+                    <tr key={expense.id} className="border-b dark:border-gray-700 last:border-0">
                       <td className="py-3 capitalize">{expense.expense_type.replace('_', ' ')}</td>
                       <td className="py-3">{formatCurrency(expense.amount)}</td>
                       <td className="py-3">{formatDate(expense.due_date)}</td>
@@ -233,7 +233,7 @@ export default function HouseDetailPage() {
               </table>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">No expenses recorded</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No expenses recorded</p>
           )}
         </div>
       </div>

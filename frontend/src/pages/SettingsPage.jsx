@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
 
       {/* Change Password */}
       <div className="card">
@@ -90,13 +90,13 @@ export default function SettingsPage() {
 
         <form onSubmit={handlePasswordChange} className="space-y-4">
           {passwordError && (
-            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
               {passwordError}
             </div>
           )}
 
           {passwordSuccess && (
-            <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-green-50 dark:bg-green-900/50 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg text-sm">
               {passwordSuccess}
             </div>
           )}
@@ -151,7 +151,7 @@ export default function SettingsPage() {
 
         {backupMessage && (
           <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${
-            backupMessage.includes('failed') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
+            backupMessage.includes('failed') ? 'bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'bg-green-50 dark:bg-green-900/50 text-green-600 dark:text-green-400'
           }`}>
             {backupMessage}
           </div>
@@ -160,7 +160,7 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div>
             <h3 className="font-medium mb-2">Local Backup</h3>
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
               Create a backup of your database on the server.
             </p>
             <div className="flex gap-3">
@@ -180,11 +180,11 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <hr />
+          <hr className="dark:border-gray-700" />
 
           <div>
             <h3 className="font-medium mb-2">Google Drive Backup</h3>
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
               Upload a backup to your Google Drive. Make sure Google Drive is configured in the server settings.
             </p>
             <button
@@ -201,7 +201,7 @@ export default function SettingsPage() {
       {/* About */}
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">About</h2>
-        <div className="space-y-2 text-sm text-gray-600">
+        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
           <p><strong>RHM - Rental House Management</strong></p>
           <p>Version 1.0.0</p>
           <p>A self-hosted application for managing rental properties.</p>

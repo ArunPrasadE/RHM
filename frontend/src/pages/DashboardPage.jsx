@@ -56,7 +56,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -91,26 +91,26 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Link to="/houses" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <HouseIcon className="w-5 h-5 text-blue-600" />
+          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+            <HouseIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <span className="font-medium">Manage Houses</span>
         </Link>
         <Link to="/tenants" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-            <UsersIcon className="w-5 h-5 text-green-600" />
+          <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+            <UsersIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
           <span className="font-medium">Manage Tenants</span>
         </Link>
         <Link to="/payments" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-            <MoneyIcon className="w-5 h-5 text-amber-600" />
+          <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center">
+            <MoneyIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <span className="font-medium">Record Payment</span>
         </Link>
         <Link to="/expenses" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
-          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-            <ExpenseIcon className="w-5 h-5 text-purple-600" />
+          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
+            <ExpenseIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
           <span className="font-medium">Add Expense</span>
         </Link>
@@ -129,17 +129,17 @@ export default function DashboardPage() {
             {pendingPayments.map((payment) => (
               <div
                 key={payment.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
               >
                 <div>
                   <div className="font-medium">{payment.house_number}</div>
-                  <div className="text-sm text-gray-500">{payment.tenant_name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{payment.tenant_name}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold text-red-600">
+                  <div className="font-semibold text-red-600 dark:text-red-400">
                     {formatCurrency(payment.pending_amount)}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {payment.days_overdue > 0 ? `${Math.floor(payment.days_overdue)} days overdue` : 'Due'}
                   </div>
                 </div>
@@ -154,17 +154,17 @@ export default function DashboardPage() {
 
 function StatCard({ title, value, subtitle, icon: Icon, color }) {
   const colorClasses = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    amber: 'bg-amber-100 text-amber-600',
-    red: 'bg-red-100 text-red-600',
+    blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400',
+    green: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400',
+    amber: 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400',
+    red: 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400',
   };
 
   return (
     <div className="card">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-500">{title}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
           <p className="text-xl font-bold mt-1">{value}</p>
           {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
         </div>

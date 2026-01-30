@@ -62,7 +62,7 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Expenses</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setShowForm('expense')}
@@ -92,13 +92,13 @@ export default function ExpensesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b">
+      <div className="flex gap-4 border-b dark:border-gray-700">
         <button
           onClick={() => setActiveTab('expenses')}
           className={`pb-3 px-2 font-medium transition-colors ${
             activeTab === 'expenses'
               ? 'text-primary-500 border-b-2 border-primary-500'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
           }`}
         >
           Bills & Taxes
@@ -108,7 +108,7 @@ export default function ExpensesPage() {
           className={`pb-3 px-2 font-medium transition-colors ${
             activeTab === 'maintenance'
               ? 'text-primary-500 border-b-2 border-primary-500'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
           }`}
         >
           Maintenance
@@ -121,7 +121,7 @@ export default function ExpensesPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left text-sm text-gray-500 bg-gray-50 border-b">
+                <tr className="text-left text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">House</th>
                   <th className="px-4 py-3">Amount</th>
@@ -132,7 +132,7 @@ export default function ExpensesPage() {
               </thead>
               <tbody>
                 {expenses.map((expense) => (
-                  <tr key={expense.id} className="border-b last:border-0">
+                  <tr key={expense.id} className="border-b dark:border-gray-700 last:border-0">
                     <td className="px-4 py-3 font-medium">
                       {expenseTypeLabels[expense.expense_type] || expense.expense_type}
                     </td>
@@ -159,7 +159,7 @@ export default function ExpensesPage() {
 
                 {expenses.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       No expenses recorded
                     </td>
                   </tr>
@@ -176,7 +176,7 @@ export default function ExpensesPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left text-sm text-gray-500 bg-gray-50 border-b">
+                <tr className="text-left text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                   <th className="px-4 py-3">Description</th>
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Total Amount</th>
@@ -186,7 +186,7 @@ export default function ExpensesPage() {
               </thead>
               <tbody>
                 {maintenanceExpenses.map((expense) => (
-                  <tr key={expense.id} className="border-b last:border-0">
+                  <tr key={expense.id} className="border-b dark:border-gray-700 last:border-0">
                     <td className="px-4 py-3 font-medium">{expense.description}</td>
                     <td className="px-4 py-3">{formatDate(expense.expense_date)}</td>
                     <td className="px-4 py-3">{formatCurrency(expense.amount)}</td>
@@ -209,7 +209,7 @@ export default function ExpensesPage() {
 
                 {maintenanceExpenses.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       No maintenance expenses recorded
                     </td>
                   </tr>

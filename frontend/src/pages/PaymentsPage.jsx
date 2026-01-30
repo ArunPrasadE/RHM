@@ -84,14 +84,14 @@ Thank you.`;
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payments</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setFilter('pending')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === 'pending'
                 ? 'bg-amber-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
           >
             Pending
@@ -101,7 +101,7 @@ Thank you.`;
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === 'paid'
                 ? 'bg-green-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
           >
             Paid
@@ -111,7 +111,7 @@ Thank you.`;
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === ''
                 ? 'bg-primary-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
           >
             All
@@ -124,7 +124,7 @@ Thank you.`;
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-gray-500 bg-gray-50 border-b">
+              <tr className="text-left text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                 <th className="px-4 py-3">House</th>
                 <th className="px-4 py-3">Tenant</th>
                 <th className="px-4 py-3">Due Date</th>
@@ -141,7 +141,7 @@ Thank you.`;
                 const whatsAppLink = getWhatsAppLink(payment);
 
                 return (
-                  <tr key={payment.id} className={`border-b last:border-0 ${isOverdue ? 'bg-red-50' : ''}`}>
+                  <tr key={payment.id} className={`border-b dark:border-gray-700 last:border-0 ${isOverdue ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
                     <td className="px-4 py-3">
                       <Link to={`/houses/${payment.house_id}`} className="text-primary-500 hover:underline font-medium">
                         {payment.house_number}
@@ -155,13 +155,13 @@ Thank you.`;
                     <td className="px-4 py-3">
                       {formatDate(payment.due_date)}
                       {daysOverdue > 0 && (
-                        <span className="block text-xs text-red-600">{daysOverdue} days overdue</span>
+                        <span className="block text-xs text-red-600 dark:text-red-400">{daysOverdue} days overdue</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {formatCurrency(payment.due_amount)}
                       {payment.additions?.length > 0 && (
-                        <span className="block text-xs text-gray-500">
+                        <span className="block text-xs text-gray-500 dark:text-gray-400">
                           includes {payment.additions.length} addition(s)
                         </span>
                       )}
@@ -202,7 +202,7 @@ Thank you.`;
 
               {payments.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="7" className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     No {filter} payments found
                   </td>
                 </tr>

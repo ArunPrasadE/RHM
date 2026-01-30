@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Readable } from 'stream';
 import zlib from 'zlib';
 import db from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -14,84 +15,105 @@ const router = express.Router();
 // Apply authentication to all routes
 router.use(authenticateToken);
 
+/**
+ * Core backup logic for Google Drive
+ * Used by both API route and scheduled backup
+ * @returns {Promise<{success: boolean, fileName?: string, googleDriveId?: string, createdTime?: string, error?: string}>}
+ */
+export async function backupToGoogleDrive() {
+  const { google } = await import('googleapis');
+
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+  if (!serviceAccountEmail || !privateKey || !folderId) {
+    return {
+      success: false,
+      error: 'Google Drive backup not configured. Please set GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, and GOOGLE_DRIVE_FOLDER_ID in .env'
+    };
+  }
+
+  // Create JWT auth client
+  const auth = new google.auth.JWT(
+    serviceAccountEmail,
+    null,
+    privateKey,
+    ['https://www.googleapis.com/auth/drive.file']
+  );
+
+  const drive = google.drive({ version: 'v3', auth });
+
+  // Get database path
+  const dbPath = process.env.DB_PATH || path.join(__dirname, '../../database/rhm.db');
+
+  // Create backup filename with timestamp
+  const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '_');
+  const backupFileName = `rhm_backup_${timestamp}.db.gz`;
+
+  // Read and compress database file
+  const dbBuffer = fs.readFileSync(dbPath);
+  const compressedBuffer = zlib.gzipSync(dbBuffer);
+
+  // Upload to Google Drive
+  const fileMetadata = {
+    name: backupFileName,
+    parents: [folderId]
+  };
+
+  const media = {
+    mimeType: 'application/gzip',
+    body: Readable.from(compressedBuffer)
+  };
+
+  const uploadResponse = await drive.files.create({
+    requestBody: fileMetadata,
+    media: media,
+    fields: 'id, name, createdTime'
+  });
+
+  // Log backup
+  db.prepare(`
+    INSERT INTO backup_log (status, file_name, google_drive_id)
+    VALUES ('success', ?, ?)
+  `).run(backupFileName, uploadResponse.data.id);
+
+  // Clean up old backups (keep last 12)
+  const backups = await drive.files.list({
+    q: `'${folderId}' in parents and name contains 'rhm_backup_'`,
+    orderBy: 'createdTime desc',
+    fields: 'files(id, name, createdTime)'
+  });
+
+  if (backups.data.files.length > 12) {
+    const toDelete = backups.data.files.slice(12);
+    for (const file of toDelete) {
+      await drive.files.delete({ fileId: file.id });
+    }
+  }
+
+  return {
+    success: true,
+    fileName: backupFileName,
+    googleDriveId: uploadResponse.data.id,
+    createdTime: uploadResponse.data.createdTime
+  };
+}
+
 // POST /api/backup/google-drive - Trigger backup to Google Drive
 router.post('/google-drive', async (req, res) => {
   try {
-    const { google } = await import('googleapis');
+    const result = await backupToGoogleDrive();
 
-    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-
-    if (!serviceAccountEmail || !privateKey || !folderId) {
-      return res.status(400).json({
-        error: 'Google Drive backup not configured. Please set GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, and GOOGLE_DRIVE_FOLDER_ID in .env'
-      });
-    }
-
-    // Create JWT auth client
-    const auth = new google.auth.JWT(
-      serviceAccountEmail,
-      null,
-      privateKey,
-      ['https://www.googleapis.com/auth/drive.file']
-    );
-
-    const drive = google.drive({ version: 'v3', auth });
-
-    // Get database path
-    const dbPath = process.env.DB_PATH || path.join(__dirname, '../../database/rhm.db');
-
-    // Create backup filename with timestamp
-    const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '_');
-    const backupFileName = `rhm_backup_${timestamp}.db.gz`;
-
-    // Read and compress database file
-    const dbBuffer = fs.readFileSync(dbPath);
-    const compressedBuffer = zlib.gzipSync(dbBuffer);
-
-    // Upload to Google Drive
-    const fileMetadata = {
-      name: backupFileName,
-      parents: [folderId]
-    };
-
-    const media = {
-      mimeType: 'application/gzip',
-      body: require('stream').Readable.from(compressedBuffer)
-    };
-
-    const uploadResponse = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id, name, createdTime'
-    });
-
-    // Log backup
-    db.prepare(`
-      INSERT INTO backup_log (status, file_name, google_drive_id)
-      VALUES ('success', ?, ?)
-    `).run(backupFileName, uploadResponse.data.id);
-
-    // Clean up old backups (keep last 12)
-    const backups = await drive.files.list({
-      q: `'${folderId}' in parents and name contains 'rhm_backup_'`,
-      orderBy: 'createdTime desc',
-      fields: 'files(id, name, createdTime)'
-    });
-
-    if (backups.data.files.length > 12) {
-      const toDelete = backups.data.files.slice(12);
-      for (const file of toDelete) {
-        await drive.files.delete({ fileId: file.id });
-      }
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
     }
 
     res.json({
       message: 'Backup completed successfully',
-      fileName: backupFileName,
-      googleDriveId: uploadResponse.data.id,
-      createdTime: uploadResponse.data.createdTime
+      fileName: result.fileName,
+      googleDriveId: result.googleDriveId,
+      createdTime: result.createdTime
     });
   } catch (error) {
     console.error('Error creating backup:', error);
