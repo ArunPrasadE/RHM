@@ -127,6 +127,124 @@ export function initializeDatabase() {
       file_name TEXT,
       google_drive_id TEXT
     );
+
+    -- =====================
+    -- PADDY FIELD MANAGEMENT
+    -- =====================
+
+    -- Paddy Fields
+    CREATE TABLE IF NOT EXISTS paddy_fields (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      area_cents INTEGER NOT NULL,
+      gps_latitude REAL,
+      gps_longitude REAL,
+      google_maps_url TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Paddy Workers
+    CREATE TABLE IF NOT EXISTS paddy_workers (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      place TEXT,
+      mobile TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Paddy Expenses
+    CREATE TABLE IF NOT EXISTS paddy_expenses (
+      id INTEGER PRIMARY KEY,
+      field_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      crop_number INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      sequence_number INTEGER,
+      amount REAL NOT NULL,
+      expense_date DATE NOT NULL,
+      worker_id INTEGER,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (field_id) REFERENCES paddy_fields(id),
+      FOREIGN KEY (worker_id) REFERENCES paddy_workers(id)
+    );
+
+    -- Paddy Income
+    CREATE TABLE IF NOT EXISTS paddy_income (
+      id INTEGER PRIMARY KEY,
+      field_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      crop_number INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      yield_kg REAL,
+      kottai_count REAL,
+      rate_per_kottai REAL,
+      amount REAL NOT NULL,
+      income_date DATE NOT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (field_id) REFERENCES paddy_fields(id)
+    );
+
+    -- ========================
+    -- COCONUT GROVE MANAGEMENT
+    -- ========================
+
+    -- Coconut Groves
+    CREATE TABLE IF NOT EXISTS coconut_groves (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      area_cents INTEGER NOT NULL,
+      gps_latitude REAL,
+      gps_longitude REAL,
+      google_maps_url TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Coconut Workers
+    CREATE TABLE IF NOT EXISTS coconut_workers (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      place TEXT,
+      mobile TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Coconut Expenses
+    CREATE TABLE IF NOT EXISTS coconut_expenses (
+      id INTEGER PRIMARY KEY,
+      grove_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      amount REAL NOT NULL,
+      expense_date DATE NOT NULL,
+      worker_id INTEGER,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (grove_id) REFERENCES coconut_groves(id),
+      FOREIGN KEY (worker_id) REFERENCES coconut_workers(id)
+    );
+
+    -- Coconut Income
+    CREATE TABLE IF NOT EXISTS coconut_income (
+      id INTEGER PRIMARY KEY,
+      grove_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      quantity_kg REAL NOT NULL,
+      rate_per_kg REAL NOT NULL,
+      amount REAL NOT NULL,
+      income_date DATE NOT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (grove_id) REFERENCES coconut_groves(id)
+    );
   `);
 
   // Create default admin user if not exists
