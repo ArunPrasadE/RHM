@@ -245,6 +245,30 @@ export function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (grove_id) REFERENCES coconut_groves(id)
     );
+
+    -- ========================
+    -- WORKER CATEGORIES
+    -- ========================
+
+    -- Paddy Worker Categories
+    CREATE TABLE IF NOT EXISTS paddy_worker_categories (
+      id INTEGER PRIMARY KEY,
+      value TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      label_tamil TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Coconut Worker Categories
+    CREATE TABLE IF NOT EXISTS coconut_worker_categories (
+      id INTEGER PRIMARY KEY,
+      value TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      label_tamil TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Create default admin user if not exists
@@ -257,6 +281,37 @@ export function initializeDatabase() {
       passwordHash
     );
     console.log('Default admin user created');
+  }
+
+  // Seed default paddy worker categories
+  const paddyCategoriesExist = db.prepare('SELECT COUNT(*) as count FROM paddy_worker_categories').get();
+  if (paddyCategoriesExist.count === 0) {
+    const paddyCategories = [
+      { value: 'supervisor', label: 'Supervisor', label_tamil: 'மேற்பார்வையாளர்' },
+      { value: 'harvester', label: 'Harvester', label_tamil: 'அறுவடையாளர்' },
+      { value: 'tractor_manager', label: 'Tractor Manager', label_tamil: 'டிராக்டர் ஓட்டி' },
+      { value: 'ploughing_manager', label: 'Ploughing Manager', label_tamil: 'உழவர்' }
+    ];
+    const insertPaddyCategory = db.prepare('INSERT INTO paddy_worker_categories (value, label, label_tamil) VALUES (?, ?, ?)');
+    for (const cat of paddyCategories) {
+      insertPaddyCategory.run(cat.value, cat.label, cat.label_tamil);
+    }
+    console.log('Default paddy worker categories created');
+  }
+
+  // Seed default coconut worker categories
+  const coconutCategoriesExist = db.prepare('SELECT COUNT(*) as count FROM coconut_worker_categories').get();
+  if (coconutCategoriesExist.count === 0) {
+    const coconutCategories = [
+      { value: 'thoppu_velai', label: 'Thoppu Velai', label_tamil: 'தோப்பு வேலை' },
+      { value: 'thengai_vettu_virpanai', label: 'Thengai Vettu & Virpanai', label_tamil: 'தேங்காய் வெட்டு மற்றும் விற்பனை' },
+      { value: 'pazhaya_maram_vettu', label: 'Pazhaya Maram Vettu', label_tamil: 'பழைய மரம் வெட்டு' }
+    ];
+    const insertCoconutCategory = db.prepare('INSERT INTO coconut_worker_categories (value, label, label_tamil) VALUES (?, ?, ?)');
+    for (const cat of coconutCategories) {
+      insertCoconutCategory.run(cat.value, cat.label, cat.label_tamil);
+    }
+    console.log('Default coconut worker categories created');
   }
 
   console.log('Database initialized successfully');

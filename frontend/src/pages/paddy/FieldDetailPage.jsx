@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../utils/api';
+import MapPopup from '../../components/Paddy/MapPopup';
 
 export default function FieldDetailPage() {
   const { id } = useParams();
   const [field, setField] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     fetchField();
@@ -78,17 +80,19 @@ export default function FieldDetailPage() {
               <p className="font-medium">{field.gps_latitude}, {field.gps_longitude}</p>
             </div>
           )}
-          {field.google_maps_url && (
+          {(field.google_maps_url || (field.gps_latitude && field.gps_longitude)) && (
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Map</p>
-              <a
-                href={field.google_maps_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
+              <p className="text-sm text-gray-500 dark:text-gray-400">Map (வரைபடம்)</p>
+              <button
+                onClick={() => setShowMap(true)}
+                className="flex items-center gap-2 text-blue-600 hover:underline"
               >
-                View on Google Maps
-              </a>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                View on Map
+              </button>
             </div>
           )}
         </div>
@@ -101,6 +105,13 @@ export default function FieldDetailPage() {
           Expense and income summary will appear here once data is added.
         </p>
       </div>
+
+      {showMap && (
+        <MapPopup
+          field={field}
+          onClose={() => setShowMap(false)}
+        />
+      )}
     </div>
   );
 }

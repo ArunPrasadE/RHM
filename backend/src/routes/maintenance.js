@@ -119,12 +119,31 @@ router.post('/', (req, res) => {
         `).get(house_id);
 
         if (currentTenant) {
+          // Calculate which rent month this expense should go to
+          // If expense date is after 9th, add to next month's rent
+          const expDate = new Date(expense_date);
+          const expDay = expDate.getDate();
+
+          let rentYear = expDate.getFullYear();
+          let rentMonth = expDate.getMonth() + 1; // 0-indexed to 1-indexed
+
+          if (expDay > 9) {
+            // Add to next month's rent
+            rentMonth += 1;
+            if (rentMonth > 12) {
+              rentMonth = 1;
+              rentYear += 1;
+            }
+          }
+
+          // Find rent payment for the calculated month
           let rentPayment = db.prepare(`
             SELECT * FROM rent_payments
-            WHERE tenant_id = ? AND is_fully_paid = 0
-            ORDER BY due_date ASC
+            WHERE tenant_id = ?
+              AND strftime('%Y', due_date) = ?
+              AND strftime('%m', due_date) = ?
             LIMIT 1
-          `).get(currentTenant.id);
+          `).get(currentTenant.id, String(rentYear), String(rentMonth).padStart(2, '0'));
 
           if (rentPayment) {
             db.prepare(`

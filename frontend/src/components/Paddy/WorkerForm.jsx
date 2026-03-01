@@ -61,7 +61,7 @@ export default function WorkerForm({ worker, categories, onSave, onClose }) {
               >
                 {categories.map(cat => (
                   <option key={cat.value} value={cat.value}>
-                    {cat.label} ({cat.labelTamil})
+                    {cat.label}{(cat.label_tamil || cat.labelTamil) ? ` (${cat.label_tamil || cat.labelTamil})` : ''}
                   </option>
                 ))}
               </select>

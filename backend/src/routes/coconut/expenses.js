@@ -55,22 +55,59 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/coconut/expenses
+// POST /api/coconut/expenses - Split total amount across all groves by area
 router.post('/', (req, res) => {
   try {
-    const { grove_id, year, category, amount, expense_date, worker_id, notes } = req.body;
+    const { year, category, total_amount, expense_date, worker_id, notes } = req.body;
 
-    if (!grove_id || !year || !category || !amount || !expense_date) {
-      return res.status(400).json({ error: 'Grove, year, category, amount, and date are required' });
+    if (!year || !category || !total_amount || !expense_date) {
+      return res.status(400).json({ error: 'Year, category, total amount, and date are required' });
     }
 
-    const result = db.prepare(`
+    // Get all active groves with their areas
+    const groves = db.prepare('SELECT id, name, area_cents FROM coconut_groves WHERE is_active = 1').all();
+
+    if (groves.length === 0) {
+      return res.status(400).json({ error: 'No active groves found' });
+    }
+
+    // Calculate total area
+    const totalAreaCents = groves.reduce((sum, grove) => sum + grove.area_cents, 0);
+
+    // Insert expense for each grove with proportional amount
+    const insertStmt = db.prepare(`
       INSERT INTO coconut_expenses (grove_id, year, category, amount, expense_date, worker_id, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(grove_id, year, category, amount, expense_date, worker_id, notes);
+    `);
 
-    const newExpense = db.prepare('SELECT * FROM coconut_expenses WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(newExpense);
+    const createdExpenses = [];
+    const insertExpenses = db.transaction(() => {
+      for (const grove of groves) {
+        // Calculate proportional amount: total_amount / total_area * grove_area
+        const groveAmount = Math.round((total_amount / totalAreaCents * grove.area_cents) * 100) / 100;
+
+        const result = insertStmt.run(
+          grove.id,
+          year,
+          category,
+          groveAmount,
+          expense_date,
+          worker_id || null,
+          notes || null
+        );
+
+        const newExpense = db.prepare('SELECT * FROM coconut_expenses WHERE id = ?').get(result.lastInsertRowid);
+        createdExpenses.push({ ...newExpense, grove_name: grove.name });
+      }
+    });
+
+    insertExpenses();
+
+    res.status(201).json({
+      message: `Expense split across ${groves.length} groves`,
+      total_amount: total_amount,
+      expenses: createdExpenses
+    });
   } catch (error) {
     console.error('Error creating expense:', error);
     res.status(500).json({ error: 'Failed to create expense' });

@@ -11,6 +11,7 @@ export default function IncomePage() {
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingIncome, setEditingIncome] = useState(null);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterCrop, setFilterCrop] = useState(1);
   const [filterField, setFilterField] = useState('all');
@@ -45,6 +46,22 @@ export default function IncomePage() {
   };
 
   const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
+
+  const handleEdit = (income) => {
+    setEditingIncome(income);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (income) => {
+    if (!confirm('Are you sure you want to delete this income entry?')) return;
+    try {
+      await api.delete(`/paddy/income/${income.id}`);
+      fetchData();
+    } catch (error) {
+      console.error('Failed to delete income:', error);
+      alert('Failed to delete income');
+    }
+  };
 
   if (loading) {
     return (
@@ -143,11 +160,12 @@ export default function IncomePage() {
                 <th className="text-right py-3 px-2">Kottai</th>
                 <th className="text-right py-3 px-2">Rate</th>
                 <th className="text-right py-3 px-2">Amount</th>
+                <th className="text-right py-3 px-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {incomes.map((income) => (
-                <tr key={income.id} className="border-b dark:border-gray-700">
+                <tr key={income.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="py-3 px-2">{income.income_date}</td>
                   <td className="py-3 px-2">{getFieldName(income.field_id)}</td>
                   <td className="py-3 px-2">{getCategoryLabel(income.category)}</td>
@@ -163,6 +181,22 @@ export default function IncomePage() {
                   <td className="py-3 px-2 text-right font-medium text-green-600 dark:text-green-400">
                     {formatCurrency(income.amount)}
                   </td>
+                  <td className="py-3 px-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(income)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(income)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <DeleteIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -172,38 +206,61 @@ export default function IncomePage() {
 
       {showForm && (
         <IncomeForm
+          income={editingIncome}
           fields={fields}
           categories={INCOME_CATEGORIES}
           defaultYear={filterYear}
           defaultCrop={filterCrop}
           onSave={async (data) => {
             try {
-              await api.post('/paddy/income', data);
+              if (editingIncome) {
+                await api.put(`/paddy/income/${editingIncome.id}`, data);
+              } else {
+                await api.post('/paddy/income', data);
+              }
               setShowForm(false);
+              setEditingIncome(null);
               fetchData();
             } catch (error) {
               console.error('Failed to save income:', error);
               alert('Failed to save income');
             }
           }}
-          onClose={() => setShowForm(false)}
+          onClose={() => { setShowForm(false); setEditingIncome(null); }}
         />
       )}
     </div>
   );
 }
 
-function IncomeForm({ fields, categories, defaultYear, defaultCrop, onSave, onClose }) {
+function EditIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+
+function DeleteIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
+function IncomeForm({ income, fields, categories, defaultYear, defaultCrop, onSave, onClose }) {
+  const isEditing = !!income;
   const [formData, setFormData] = useState({
-    field_id: fields[0]?.id || '',
-    year: defaultYear,
-    crop_number: defaultCrop,
-    category: 'nel',
-    yield_kg: '',
-    rate_per_kottai: '',
-    amount: '',
-    income_date: new Date().toISOString().split('T')[0],
-    notes: ''
+    field_id: income?.field_id || fields[0]?.id || '',
+    year: income?.year || defaultYear,
+    crop_number: income?.crop_number || defaultCrop,
+    category: income?.category || 'nel',
+    yield_kg: income?.yield_kg || '',
+    rate_per_kottai: income?.rate_per_kottai || '',
+    amount: income?.amount || '',
+    income_date: income?.income_date || new Date().toISOString().split('T')[0],
+    notes: income?.notes || ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -246,7 +303,9 @@ function IncomeForm({ fields, categories, defaultYear, defaultCrop, onSave, onCl
       <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Add Income (வருமானம் சேர்)</h2>
+            <h2 className="text-xl font-semibold">
+              {isEditing ? 'Edit Income (வருமானம் திருத்து)' : 'Add Income (வருமானம் சேர்)'}
+            </h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -381,7 +440,7 @@ function IncomeForm({ fields, categories, defaultYear, defaultCrop, onSave, onCl
                 Cancel
               </button>
               <button type="submit" disabled={loading} className="flex-1 btn btn-primary">
-                {loading ? 'Saving...' : 'Add Income'}
+                {loading ? 'Saving...' : isEditing ? 'Update Income' : 'Add Income'}
               </button>
             </div>
           </form>

@@ -18,6 +18,7 @@ export default function ExpensesPage() {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterGrove, setFilterGrove] = useState('all');
 
@@ -53,6 +54,46 @@ export default function ExpensesPage() {
   };
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Group expenses by category for "All Groves" view
+  const groupedExpenses = () => {
+    if (filterGrove !== 'all') return null;
+
+    const grouped = {};
+    expenses.forEach(exp => {
+      const key = `${exp.category}_${exp.expense_date}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          category: exp.category,
+          expense_date: exp.expense_date,
+          notes: exp.notes,
+          total_amount: 0,
+          expense_ids: []
+        };
+      }
+      grouped[key].total_amount += exp.amount;
+      grouped[key].expense_ids.push(exp.id);
+    });
+    return Object.values(grouped).sort((a, b) =>
+      new Date(b.expense_date) - new Date(a.expense_date)
+    );
+  };
+
+  const handleEdit = (expense) => {
+    setEditingExpense(expense);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (expense) => {
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+    try {
+      await api.delete(`/coconut/expenses/${expense.id}`);
+      fetchData();
+    } catch (error) {
+      console.error('Failed to delete expense:', error);
+      alert('Failed to delete expense');
+    }
+  };
 
   if (loading) {
     return (
@@ -128,25 +169,68 @@ export default function ExpensesPage() {
             Add First Expense
           </button>
         </div>
-      ) : (
-        <div className="card">
+      ) : filterGrove === 'all' ? (
+        /* Grouped view - show category totals */
+        <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b dark:border-gray-700">
                 <th className="text-left py-3 px-2">Date</th>
-                <th className="text-left py-3 px-2">Grove</th>
+                <th className="text-left py-3 px-2">Category</th>
+                <th className="text-right py-3 px-2">Total Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupedExpenses()?.map((group, idx) => (
+                <tr key={idx} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="py-3 px-2">{group.expense_date}</td>
+                  <td className="py-3 px-2">{getCategoryLabel(group.category)}</td>
+                  <td className="py-3 px-2 text-right font-medium text-red-600 dark:text-red-400">
+                    {formatCurrency(group.total_amount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">
+            * Select a specific grove to see individual split values and edit/delete options
+          </p>
+        </div>
+      ) : (
+        /* Individual grove view - show split values with edit/delete */
+        <div className="card overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b dark:border-gray-700">
+                <th className="text-left py-3 px-2">Date</th>
                 <th className="text-left py-3 px-2">Category</th>
                 <th className="text-right py-3 px-2">Amount</th>
+                <th className="text-right py-3 px-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {expenses.map((expense) => (
-                <tr key={expense.id} className="border-b dark:border-gray-700">
+                <tr key={expense.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="py-3 px-2">{expense.expense_date}</td>
-                  <td className="py-3 px-2">{getGroveName(expense.grove_id)}</td>
                   <td className="py-3 px-2">{getCategoryLabel(expense.category)}</td>
                   <td className="py-3 px-2 text-right font-medium">
                     {formatCurrency(expense.amount)}
+                  </td>
+                  <td className="py-3 px-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(expense)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(expense)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <DeleteIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -157,48 +241,71 @@ export default function ExpensesPage() {
 
       {showForm && (
         <ExpenseForm
+          expense={editingExpense}
           groves={groves}
           workers={workers}
           categories={EXPENSE_CATEGORIES}
           defaultYear={filterYear}
           onSave={async (data) => {
             try {
-              await api.post('/coconut/expenses', data);
+              if (editingExpense) {
+                await api.put(`/coconut/expenses/${editingExpense.id}`, data);
+              } else {
+                await api.post('/coconut/expenses', data);
+              }
               setShowForm(false);
+              setEditingExpense(null);
               fetchData();
             } catch (error) {
               console.error('Failed to save expense:', error);
               alert('Failed to save expense');
             }
           }}
-          onClose={() => setShowForm(false)}
+          onClose={() => { setShowForm(false); setEditingExpense(null); }}
         />
       )}
     </div>
   );
 }
 
-function ExpenseForm({ groves, workers, categories, defaultYear, onSave, onClose }) {
+function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave, onClose }) {
+  const isEditing = !!expense;
   const [formData, setFormData] = useState({
-    grove_id: groves[0]?.id || '',
-    year: defaultYear,
-    category: '',
-    worker_id: '',
-    amount: '',
-    expense_date: new Date().toISOString().split('T')[0],
-    notes: ''
+    grove_id: expense?.grove_id || groves[0]?.id || '',
+    year: expense?.year || defaultYear,
+    category: expense?.category || '',
+    worker_id: expense?.worker_id || '',
+    amount: expense?.amount || '',
+    total_amount: '',
+    expense_date: expense?.expense_date || new Date().toISOString().split('T')[0],
+    notes: expense?.notes || ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Calculate total area for split preview
+  const totalAreaCents = groves.reduce((sum, g) => sum + g.area_cents, 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave({
-        ...formData,
-        amount: parseFloat(formData.amount),
-        worker_id: formData.worker_id ? parseInt(formData.worker_id) : null
-      });
+      if (isEditing) {
+        await onSave({
+          grove_id: parseInt(formData.grove_id),
+          year: formData.year,
+          category: formData.category,
+          worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
+          amount: parseFloat(formData.amount),
+          expense_date: formData.expense_date,
+          notes: formData.notes
+        });
+      } else {
+        await onSave({
+          ...formData,
+          total_amount: parseFloat(formData.total_amount),
+          worker_id: formData.worker_id ? parseInt(formData.worker_id) : null
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -209,7 +316,9 @@ function ExpenseForm({ groves, workers, categories, defaultYear, onSave, onClose
       <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Add Expense (செலவு சேர்)</h2>
+            <h2 className="text-xl font-semibold">
+              {isEditing ? 'Edit Expense (செலவு திருத்து)' : 'Add Expense (செலவு சேர்)'}
+            </h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -218,12 +327,12 @@ function ExpenseForm({ groves, workers, categories, defaultYear, onSave, onClose
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            {isEditing && (
               <div>
                 <label className="label">Grove (தோப்பு) *</label>
                 <select
                   value={formData.grove_id}
-                  onChange={(e) => setFormData({ ...formData, grove_id: parseInt(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, grove_id: e.target.value })}
                   className="input"
                   required
                 >
@@ -232,20 +341,21 @@ function ExpenseForm({ groves, workers, categories, defaultYear, onSave, onClose
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="label">Year (ஆண்டு) *</label>
-                <select
-                  value={formData.year}
-                  onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                  className="input"
-                  required
-                >
-                  {[...Array(5)].map((_, i) => {
-                    const year = new Date().getFullYear() - i;
-                    return <option key={year} value={year}>{year}</option>;
-                  })}
-                </select>
-              </div>
+            )}
+
+            <div>
+              <label className="label">Year (ஆண்டு) *</label>
+              <select
+                value={formData.year}
+                onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                className="input"
+                required
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
             </div>
 
             <div>
@@ -277,22 +387,27 @@ function ExpenseForm({ groves, workers, categories, defaultYear, onSave, onClose
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 items-end">
               <div>
-                <label className="label">Amount (தொகை) *</label>
+                <label className="label whitespace-nowrap">
+                  {isEditing ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
+                </label>
                 <input
                   type="number"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  value={isEditing ? formData.amount : formData.total_amount}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    [isEditing ? 'amount' : 'total_amount']: e.target.value
+                  })}
                   className="input"
-                  placeholder="Enter amount"
+                  placeholder={isEditing ? 'Enter amount' : 'Enter total'}
                   min="0"
                   step="1"
                   required
                 />
               </div>
               <div>
-                <label className="label">Date (தேதி) *</label>
+                <label className="label whitespace-nowrap">Date (தேதி) *</label>
                 <input
                   type="date"
                   value={formData.expense_date}
@@ -302,6 +417,26 @@ function ExpenseForm({ groves, workers, categories, defaultYear, onSave, onClose
                 />
               </div>
             </div>
+
+            {/* Split Preview - only for new expenses */}
+            {!isEditing && formData.total_amount && groves.length > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">
+                  Split Preview (பிரிவு முன்னோட்டம்):
+                </p>
+                <div className="space-y-1 text-sm">
+                  {groves.map(g => {
+                    const groveAmount = (parseFloat(formData.total_amount) / totalAreaCents * g.area_cents).toFixed(2);
+                    return (
+                      <div key={g.id} className="flex justify-between text-amber-700 dark:text-amber-400">
+                        <span>{g.name}</span>
+                        <span>₹{groveAmount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="label">Notes (குறிப்புகள்)</label>
@@ -319,12 +454,28 @@ function ExpenseForm({ groves, workers, categories, defaultYear, onSave, onClose
                 Cancel
               </button>
               <button type="submit" disabled={loading} className="flex-1 btn btn-primary">
-                {loading ? 'Saving...' : 'Add Expense'}
+                {loading ? 'Saving...' : isEditing ? 'Update Expense' : 'Add Expense'}
               </button>
             </div>
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+function EditIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+
+function DeleteIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
   );
 }

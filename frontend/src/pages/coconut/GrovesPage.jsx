@@ -106,44 +106,46 @@ export default function GrovesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groves.map((grove) => (
             <div key={grove.id} className="card">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg">{grove.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {formatArea(grove.area_cents)}
                   </p>
+                  {grove.google_maps_url && (
+                    <a
+                      href={grove.google_maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline mt-2 inline-block"
+                    >
+                      View on Map
+                    </a>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(grove)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(grove)}
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                    >
+                      <EditIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(grove)}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400"
+                    >
+                      <DeleteIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <Link
+                    to={`/coconut/groves/${grove.id}`}
+                    className="btn btn-secondary text-sm px-3 py-1"
                   >
-                    <EditIcon className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(grove)}
-                    className="text-red-600 hover:text-red-800 dark:text-red-400"
-                  >
-                    <DeleteIcon className="w-5 h-5" />
-                  </button>
+                    View Details
+                  </Link>
                 </div>
               </div>
-              {grove.google_maps_url && (
-                <a
-                  href={grove.google_maps_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline mt-2 inline-block"
-                >
-                  View on Map
-                </a>
-              )}
-              <Link
-                to={`/coconut/groves/${grove.id}`}
-                className="btn btn-secondary w-full mt-4"
-              >
-                View Details
-              </Link>
             </div>
           ))}
         </div>

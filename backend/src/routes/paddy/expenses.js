@@ -60,32 +60,70 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/paddy/expenses
+// POST /api/paddy/expenses - Split total amount across all fields by area
 router.post('/', (req, res) => {
   try {
     const {
-      field_id,
       year,
       crop_number,
       category,
       sequence_number,
-      amount,
+      total_amount,
       expense_date,
       worker_id,
       notes
     } = req.body;
 
-    if (!field_id || !year || !crop_number || !category || !amount || !expense_date) {
-      return res.status(400).json({ error: 'Field, year, crop number, category, amount, and date are required' });
+    if (!year || !crop_number || !category || !total_amount || !expense_date) {
+      return res.status(400).json({ error: 'Year, crop number, category, total amount, and date are required' });
     }
 
-    const result = db.prepare(`
+    // Get all active fields with their areas
+    const fields = db.prepare('SELECT id, name, area_cents FROM paddy_fields WHERE is_active = 1').all();
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No active fields found' });
+    }
+
+    // Calculate total area
+    const totalAreaCents = fields.reduce((sum, field) => sum + field.area_cents, 0);
+
+    // Insert expense for each field with proportional amount
+    const insertStmt = db.prepare(`
       INSERT INTO paddy_expenses (field_id, year, crop_number, category, sequence_number, amount, expense_date, worker_id, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(field_id, year, crop_number, category, sequence_number, amount, expense_date, worker_id, notes);
+    `);
 
-    const newExpense = db.prepare('SELECT * FROM paddy_expenses WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(newExpense);
+    const createdExpenses = [];
+    const insertExpenses = db.transaction(() => {
+      for (const field of fields) {
+        // Calculate proportional amount: total_amount / total_area * field_area
+        const fieldAmount = Math.round((total_amount / totalAreaCents * field.area_cents) * 100) / 100;
+
+        const result = insertStmt.run(
+          field.id,
+          year,
+          crop_number,
+          category,
+          sequence_number || null,
+          fieldAmount,
+          expense_date,
+          worker_id || null,
+          notes || null
+        );
+
+        const newExpense = db.prepare('SELECT * FROM paddy_expenses WHERE id = ?').get(result.lastInsertRowid);
+        createdExpenses.push({ ...newExpense, field_name: field.name });
+      }
+    });
+
+    insertExpenses();
+
+    res.status(201).json({
+      message: `Expense split across ${fields.length} fields`,
+      total_amount: total_amount,
+      expenses: createdExpenses
+    });
   } catch (error) {
     console.error('Error creating expense:', error);
     res.status(500).json({ error: 'Failed to create expense' });

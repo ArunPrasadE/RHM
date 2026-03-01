@@ -115,4 +115,100 @@ router.delete('/:id', (req, res) => {
   }
 });
 
+// ========================
+// WORKER CATEGORIES
+// ========================
+
+// GET /api/paddy/workers/categories - List all categories
+router.get('/categories/list', (req, res) => {
+  try {
+    const categories = db.prepare('SELECT * FROM paddy_worker_categories WHERE is_active = 1 ORDER BY label').all();
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+// POST /api/paddy/workers/categories - Add new category
+router.post('/categories', (req, res) => {
+  try {
+    const { value, label, label_tamil } = req.body;
+
+    if (!value || !label) {
+      return res.status(400).json({ error: 'Value and label are required' });
+    }
+
+    // Check if value already exists
+    const existing = db.prepare('SELECT * FROM paddy_worker_categories WHERE value = ?').get(value);
+    if (existing) {
+      if (existing.is_active === 0) {
+        // Reactivate existing category
+        db.prepare('UPDATE paddy_worker_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?')
+          .run(label, label_tamil || null, existing.id);
+        const updated = db.prepare('SELECT * FROM paddy_worker_categories WHERE id = ?').get(existing.id);
+        return res.status(201).json(updated);
+      }
+      return res.status(400).json({ error: 'Category with this value already exists' });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO paddy_worker_categories (value, label, label_tamil)
+      VALUES (?, ?, ?)
+    `).run(value, label, label_tamil || null);
+
+    const newCategory = db.prepare('SELECT * FROM paddy_worker_categories WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('Error creating category:', error);
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
+// PUT /api/paddy/workers/categories/:id - Update category
+router.put('/categories/:id', (req, res) => {
+  try {
+    const { label, label_tamil } = req.body;
+
+    const existing = db.prepare('SELECT * FROM paddy_worker_categories WHERE id = ? AND is_active = 1').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    db.prepare(`
+      UPDATE paddy_worker_categories
+      SET label = ?, label_tamil = ?
+      WHERE id = ?
+    `).run(
+      label || existing.label,
+      label_tamil ?? existing.label_tamil,
+      req.params.id
+    );
+
+    const updated = db.prepare('SELECT * FROM paddy_worker_categories WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating category:', error);
+    res.status(500).json({ error: 'Failed to update category' });
+  }
+});
+
+// DELETE /api/paddy/workers/categories/:id - Soft delete category
+router.delete('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM paddy_worker_categories WHERE id = ? AND is_active = 1').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    db.prepare('UPDATE paddy_worker_categories SET is_active = 0 WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ error: 'Failed to delete category' });
+  }
+});
+
 export default router;
