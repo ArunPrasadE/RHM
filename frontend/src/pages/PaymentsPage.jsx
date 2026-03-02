@@ -60,17 +60,77 @@ export default function PaymentsPage() {
   const getWhatsAppLink = (payment) => {
     if (!payment.tenant_phone) return null;
 
-    const message = `Dear ${payment.tenant_name},
+    // Find all pending payments for this tenant (including previous months)
+    const tenantPendingPayments = payments.filter(p =>
+      p.tenant_id === payment.tenant_id && !p.is_fully_paid
+    ).sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 
-This is a reminder that your rent of ${formatCurrency(payment.due_amount)} for house ${payment.house_number} was due on ${formatDate(payment.due_date)}.
+    // Calculate previous months pending (excluding current payment)
+    const previousPending = tenantPendingPayments
+      .filter(p => p.id !== payment.id)
+      .reduce((sum, p) => sum + (p.due_amount - p.paid_amount), 0);
 
-Pending amount: ${formatCurrency(payment.pending_amount)}
+    // Current payment details
+    const additions = payment.additions || [];
+    const additionsTotal = additions.reduce((sum, a) => sum + a.amount, 0);
+    const regularRent = payment.due_amount - additionsTotal;
+    const currentPending = payment.due_amount - payment.paid_amount;
 
-Please pay at the earliest.
+    // Build message parts
+    let messageParts = [`Dear ${payment.tenant_name},`];
+    messageParts.push('');
+    messageParts.push(`Rent reminder for house ${payment.house_number} (Due: ${formatDate(payment.due_date)})`);
+    messageParts.push('');
 
-Thank you.`;
+    // Regular rent (only if > 0)
+    if (regularRent > 0) {
+      messageParts.push(`Regular Rent: ${formatCurrency(regularRent)}`);
+    }
 
-    return generateWhatsAppLink(payment.tenant_phone, message);
+    // Additional charges breakdown (only if amount > 0)
+    if (additions.length > 0) {
+      additions.forEach(addition => {
+        if (addition.amount > 0) {
+          const label = addition.source_type === 'motor_bill' ? 'Motor Bill' :
+                        addition.source_type === 'water_bill' ? 'Water Bill' :
+                        addition.source_type === 'maintenance' ? 'Maintenance' :
+                        addition.description || 'Other';
+          messageParts.push(`${label}: ${formatCurrency(addition.amount)}`);
+        }
+      });
+    }
+
+    // Show total due line if there are additions
+    if (additionsTotal > 0 && regularRent > 0) {
+      messageParts.push(`-----------------------`);
+      messageParts.push(`Total Due: ${formatCurrency(payment.due_amount)}`);
+    }
+
+    // Already paid amount (if partial payment made)
+    if (payment.paid_amount > 0) {
+      messageParts.push('');
+      messageParts.push(`Already Paid: ${formatCurrency(payment.paid_amount)}`);
+    }
+
+    // Previous months pending (if any)
+    if (previousPending > 0) {
+      messageParts.push('');
+      messageParts.push(`Previous Dues: ${formatCurrency(previousPending)}`);
+    }
+
+    // Total pending amount
+    const totalPending = currentPending + previousPending;
+    if (totalPending > 0) {
+      messageParts.push('');
+      messageParts.push(`*Total Pending: ${formatCurrency(totalPending)}*`);
+    }
+
+    messageParts.push('');
+    messageParts.push('Please pay at the earliest.');
+    messageParts.push('');
+    messageParts.push('Thank you.');
+
+    return generateWhatsAppLink(payment.tenant_phone, messageParts.join('\n'));
   };
 
   if (loading) {
