@@ -14,7 +14,7 @@ const EXPENSE_CATEGORIES = [
   { value: 'vayal_velai', label: 'Vayal Velai', labelTamil: 'வயல் வேலை', hasSequence: true },
   { value: 'vayal_aruppu_machine', label: 'Vayal Aruppu Machine', labelTamil: 'வயல் அறுப்பு மெஷின்', hasSequence: false },
   { value: 'tractor', label: 'Tractor', labelTamil: 'டிராக்டர்', hasSequence: false },
-  { value: 'patta_nel', label: 'Patta Nel', labelTamil: 'பட்டா நெல்', hasSequence: false, needsField: true },
+  { value: 'patta_nel', label: 'Patta Nel', labelTamil: 'பாட்ட நெல்', hasSequence: false, needsField: true },
 ];
 
 export default function ExpensesPage() {
@@ -91,6 +91,16 @@ export default function ExpensesPage() {
     setShowForm(true);
   };
 
+  const handleEditGrouped = (group) => {
+    setEditingExpense({
+      ...group,
+      isGrouped: true,
+      year: filterYear,
+      crop_number: filterCrop
+    });
+    setShowForm(true);
+  };
+
   const handleDelete = async (expense) => {
     if (!confirm('Are you sure you want to delete this expense?')) return;
     try {
@@ -98,6 +108,19 @@ export default function ExpensesPage() {
       fetchData();
     } catch (error) {
       console.error('Failed to delete expense:', error);
+      alert('Failed to delete expense');
+    }
+  };
+
+  const handleDeleteGrouped = async (group) => {
+    if (!confirm(`Delete all ${group.expense_ids.length} expense records for this category?`)) return;
+    try {
+      for (const id of group.expense_ids) {
+        await api.delete(`/paddy/expenses/${id}`);
+      }
+      fetchData();
+    } catch (error) {
+      console.error('Failed to delete grouped expense:', error);
       alert('Failed to delete expense');
     }
   };
@@ -196,6 +219,7 @@ export default function ExpensesPage() {
                 <th className="text-left py-3 px-2">Date</th>
                 <th className="text-left py-3 px-2">Category</th>
                 <th className="text-right py-3 px-2">Total Amount</th>
+                <th className="text-right py-3 px-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -211,13 +235,26 @@ export default function ExpensesPage() {
                   <td className="py-3 px-2 text-right font-medium text-red-600 dark:text-red-400">
                     {formatCurrency(group.total_amount)}
                   </td>
+                  <td className="py-3 px-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEditGrouped(group)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteGrouped(group)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <DeleteIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">
-            * Select a specific field to see individual split values and edit/delete options
-          </p>
         </div>
       ) : (
         /* Individual field view - show split values with edit/delete */
@@ -278,9 +315,14 @@ export default function ExpensesPage() {
           existingExpenses={expenses}
           onSave={async (data) => {
             try {
-              if (editingExpense) {
+              if (editingExpense?.isGrouped) {
+                // Grouped edit - update all related expenses
+                await api.put('/paddy/expenses/grouped', data);
+              } else if (editingExpense) {
+                // Single expense edit
                 await api.put(`/paddy/expenses/${editingExpense.id}`, data);
               } else {
+                // New expense
                 await api.post('/paddy/expenses', data);
               }
               setShowForm(false);
@@ -316,6 +358,7 @@ function DeleteIcon({ className }) {
 
 function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaultCrop, existingExpenses, onSave, onClose }) {
   const isEditing = !!expense;
+  const isGrouped = expense?.isGrouped;
   const [formData, setFormData] = useState({
     field_id: expense?.field_id || fields[0]?.id || '',
     year: expense?.year || defaultYear,
@@ -324,7 +367,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
     sequence_number: expense?.sequence_number || '',
     worker_id: expense?.worker_id || '',
     amount: expense?.amount || '',
-    total_amount: '',
+    total_amount: isGrouped ? expense?.total_amount || '' : '',
     expense_date: expense?.expense_date || new Date().toISOString().split('T')[0],
     notes: expense?.notes || ''
   });
@@ -363,8 +406,20 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
     e.preventDefault();
     setLoading(true);
     try {
-      if (isEditing) {
-        // When editing, update single expense
+      if (isGrouped) {
+        // When editing grouped, update all related expenses with new total
+        await onSave({
+          category: formData.category,
+          sequence_number: formData.sequence_number ? parseInt(formData.sequence_number) : null,
+          expense_date: formData.expense_date,
+          year: formData.year,
+          crop_number: formData.crop_number,
+          new_total_amount: parseFloat(formData.total_amount),
+          worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
+          notes: formData.notes
+        });
+      } else if (isEditing) {
+        // When editing single expense
         await onSave({
           field_id: parseInt(formData.field_id),
           year: formData.year,
@@ -406,7 +461,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isEditing && (
+            {/* Show field dropdown only when editing single expense (not grouped) */}
+            {isEditing && !isGrouped && (
               <div>
                 <label className="label">Field (வயல்) *</label>
                 <select
@@ -422,6 +478,16 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               </div>
             )}
 
+            {/* Show "All Fields" indicator for grouped edit */}
+            {isGrouped && (
+              <div>
+                <label className="label">Field (வயல்)</label>
+                <p className="input bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                  All Fields (எல்லா வயல்கள்)
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="label">Crop (பயிர்) *</label>
               <select
@@ -429,6 +495,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                 onChange={(e) => setFormData({ ...formData, crop_number: parseInt(e.target.value) })}
                 className="input"
                 required
+                disabled={isGrouped}
               >
                 <option value={1}>Crop 1</option>
                 <option value={2}>Crop 2</option>
@@ -440,8 +507,9 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               <select
                 value={formData.category}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="input"
+                className={`input ${isGrouped ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
                 required
+                disabled={isGrouped}
               >
                 <option value="">Select category</option>
                 {categories.map(c => (
@@ -456,8 +524,9 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                 <select
                   value={formData.sequence_number}
                   onChange={(e) => setFormData({ ...formData, sequence_number: e.target.value })}
-                  className="input"
+                  className={`input ${isGrouped ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
                   required
+                  disabled={isGrouped}
                 >
                   <option value="">Select</option>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
@@ -484,17 +553,17 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
             <div className="grid grid-cols-2 gap-4 items-end">
               <div>
                 <label className="label whitespace-nowrap">
-                  {isEditing ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
+                  {isEditing && !isGrouped ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
                 </label>
                 <input
                   type="number"
-                  value={isEditing ? formData.amount : formData.total_amount}
+                  value={isEditing && !isGrouped ? formData.amount : formData.total_amount}
                   onChange={(e) => setFormData({
                     ...formData,
-                    [isEditing ? 'amount' : 'total_amount']: e.target.value
+                    [isEditing && !isGrouped ? 'amount' : 'total_amount']: e.target.value
                   })}
                   className="input"
-                  placeholder={isEditing ? 'Enter amount' : 'Enter total'}
+                  placeholder={isEditing && !isGrouped ? 'Enter amount' : 'Enter total'}
                   min="0"
                   step="1"
                   required
@@ -506,17 +575,18 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                   type="date"
                   value={formData.expense_date}
                   onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
-                  className="input"
+                  className={`input ${isGrouped ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
                   required
+                  disabled={isGrouped}
                 />
               </div>
             </div>
 
-            {/* Split Preview - only for new expenses */}
-            {!isEditing && formData.total_amount && fields.length > 0 && (
+            {/* Split Preview - for new expenses and grouped edits */}
+            {(!isEditing || isGrouped) && formData.total_amount && fields.length > 0 && (
               <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
                 <p className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">
-                  Split Preview (பிரிவு முன்னோட்டம்):
+                  {isGrouped ? 'New Split Preview (புதிய பிரிவு முன்னோட்டம்):' : 'Split Preview (பிரிவு முன்னோட்டம்):'}
                 </p>
                 <div className="space-y-1 text-sm">
                   {fields.map(f => {

@@ -130,6 +130,74 @@ router.post('/', (req, res) => {
   }
 });
 
+// PUT /api/paddy/expenses/grouped - Update all expenses in a group (re-split total)
+router.put('/grouped', (req, res) => {
+  try {
+    const {
+      category,
+      sequence_number,
+      expense_date,
+      year,
+      crop_number,
+      new_total_amount,
+      worker_id,
+      notes
+    } = req.body;
+
+    if (!category || !expense_date || !year || !crop_number || !new_total_amount) {
+      return res.status(400).json({ error: 'Category, date, year, crop number, and new total amount are required' });
+    }
+
+    // Find all related expenses
+    const relatedExpenses = db.prepare(`
+      SELECT pe.*, pf.area_cents
+      FROM paddy_expenses pe
+      JOIN paddy_fields pf ON pe.field_id = pf.id
+      WHERE pe.category = ?
+        AND pe.sequence_number IS ?
+        AND pe.expense_date = ?
+        AND pe.year = ?
+        AND pe.crop_number = ?
+    `).all(category, sequence_number || null, expense_date, year, crop_number);
+
+    if (relatedExpenses.length === 0) {
+      return res.status(404).json({ error: 'No related expenses found' });
+    }
+
+    // Calculate total area from related expenses
+    const totalAreaCents = relatedExpenses.reduce((sum, e) => sum + e.area_cents, 0);
+
+    // Update all related expenses with new proportional amounts
+    const updateStmt = db.prepare(`
+      UPDATE paddy_expenses
+      SET amount = ?, worker_id = ?, notes = ?
+      WHERE id = ?
+    `);
+
+    const updateExpenses = db.transaction(() => {
+      for (const expense of relatedExpenses) {
+        const newAmount = Math.round((new_total_amount / totalAreaCents * expense.area_cents) * 100) / 100;
+        updateStmt.run(
+          newAmount,
+          worker_id ?? expense.worker_id,
+          notes ?? expense.notes,
+          expense.id
+        );
+      }
+    });
+
+    updateExpenses();
+
+    res.json({
+      message: `Updated ${relatedExpenses.length} expense records`,
+      new_total_amount
+    });
+  } catch (error) {
+    console.error('Error updating grouped expenses:', error);
+    res.status(500).json({ error: 'Failed to update grouped expenses' });
+  }
+});
+
 // PUT /api/paddy/expenses/:id
 router.put('/:id', (req, res) => {
   try {
