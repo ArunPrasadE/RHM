@@ -9,6 +9,9 @@ COPY . .
   
 # Install backend dependencies
 RUN cd backend && npm install
+
+# Create the database directory so SQLite doesn't fail
+RUN mkdir -p backend/database
    
 # Install frontend dependencies and build the React app
 RUN cd frontend && npm install && npm run build
