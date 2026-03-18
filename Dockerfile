@@ -18,4 +18,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
    
 # Start the application using the project's production script
-CMD ["node", "backend/server.js"]
+CMD ["node", "backend/index.js"]
