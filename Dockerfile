@@ -14,7 +14,8 @@ RUN cd backend && npm install
 RUN cd frontend && npm install && npm run build
   
 # Expose the port (matches your Dokploy environment variable)
+ENV NODE_ENV=production
 EXPOSE 3000
    
 # Start the application using the project's production script
-CMD ["bash", "start-prod.sh"]
+CMD ["node", "backend/server.js"]
