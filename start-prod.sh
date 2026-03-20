@@ -36,10 +36,10 @@ else
     echo "      Nginx already configured."
 fi
 
-# Test nginx config
+# Test and start/restart nginx
 sudo nginx -t
-sudo systemctl reload nginx
-echo "      Nginx reloaded!"
+sudo systemctl restart nginx
+echo "      Nginx started!"
 echo ""
 
 # Step 4: Start Tailscale for remote access

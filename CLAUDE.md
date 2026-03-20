@@ -19,57 +19,59 @@ RHM (Rental House Management) is a self-hosted web application for managing 11 r
 
 ## Project Structure
 
+This project uses **git worktrees** to separate production and development:
+
 ```
-/home/pi/RHM/
+/home/pi/RHM/           ← PRODUCTION (always on main branch)
 ├── install.sh          # Install all dependencies
 ├── start.sh            # Start development servers
 ├── start-prod.sh       # Deploy to production
-├── requirements.txt    # Dependencies documentation
-├── SETUP.md            # Setup guide
-├── WORKFLOW.md         # Development workflow guide
-├── CLAUDE.md           # This file
 ├── backend/
-│   ├── src/
-│   │   ├── index.js    # Server entry point
-│   │   ├── config/     # Database setup
-│   │   ├── middleware/ # JWT auth
-│   │   ├── routes/     # API endpoints
-│   │   └── utils/      # Helpers (PDF, WhatsApp, notifications)
-│   ├── database/       # SQLite database file (gitignored)
-│   ├── package.json
-│   └── .env            # Environment config
-├── frontend/
-│   ├── src/
-│   │   ├── components/ # Reusable UI components
-│   │   ├── pages/      # Route pages
-│   │   ├── context/    # React context (AuthContext)
-│   │   ├── hooks/      # Custom hooks
-│   │   └── utils/      # API client, formatters
-│   ├── dist/           # Production build (generated)
-│   └── package.json
-└── nginx/
-    └── rhm.conf        # Nginx configuration
+│   ├── database/rhm.db # Production database
+│   └── .env            # Production config (port 3001)
+├── frontend/dist/      # Production build
+└── nginx/rhm.conf      # Nginx configuration
+
+/home/pi/RHM-dev/       ← DEVELOPMENT (switch branches freely)
+├── start.sh            # Start dev servers (port 3002)
+├── backend/
+│   ├── database/rhm_test.db  # Test database
+│   └── .env            # Dev config (port 3002)
+└── frontend/           # Dev frontend (port 5173)
 ```
 
 ## Quick Commands
 
-### Installation
+### Development (in /home/pi/RHM-dev)
 ```bash
-./install.sh            # Install all dependencies
+cd /home/pi/RHM-dev
+./install.sh            # Install dependencies (first time only)
+./start.sh              # Start dev servers (frontend :5173, backend :3002)
+git checkout -b feature # Create feature branch
+git checkout main       # Switch branches freely
 ```
 
-### Development
+### Production (in /home/pi/RHM)
 ```bash
-./start.sh              # Start both servers (frontend :5173, backend :3001)
-```
-
-### Production
-```bash
-./start-prod.sh         # Build and deploy to production
-pm2 stop rhm-backend    # Stop backend
-pm2 restart rhm-backend # Restart backend
-sudo systemctl stop nginx   # Stop nginx
+cd /home/pi/RHM
+git pull origin main    # Get latest changes
+./start-prod.sh         # Build and deploy
+pm2 restart rhm-backend # Restart backend only
 sudo systemctl restart nginx # Restart nginx
+```
+
+### Deploy Changes to Production
+```bash
+# 1. In dev directory - merge to main and push
+cd /home/pi/RHM-dev
+git checkout main
+git merge feature-branch
+git push origin main
+
+# 2. In production directory - pull and deploy
+cd /home/pi/RHM
+git pull origin main
+./start-prod.sh
 ```
 
 ### Tailscale
@@ -81,11 +83,11 @@ sudo tailscale up       # Reconnect
 
 ## Access URLs
 
-| Environment | URL | Access From |
-|-------------|-----|-------------|
-| Development | http://localhost:5173 | Local only |
-| Production (LAN) | http://192.168.31.253 | Home network |
-| Production (Tailscale) | http://100.95.218.115 | Anywhere |
+| Environment | URL | Port | Database |
+|-------------|-----|------|----------|
+| Development | http://localhost:5173 | 3002 | rhm_test.db |
+| Production (LAN) | http://192.168.31.253 | 3001 | rhm.db |
+| Production (Tailscale) | http://100.95.218.115 | 3001 | rhm.db |
 
 ## Default Login
 
@@ -199,8 +201,23 @@ sudo systemctl enable nginx
 - `WORKFLOW.md` - Git workflow and Tailscale remote access
 - `requirements.txt` - All dependencies and installation steps
 
-## Git Branches
+## Git Worktrees
 
+This project uses git worktrees to isolate production from development:
+
+| Directory | Branch | Purpose |
+|-----------|--------|---------|
+| `/home/pi/RHM` | main (locked) | Production - never switch branches here |
+| `/home/pi/RHM-dev` | any | Development - switch branches freely |
+
+### Worktree Commands
+```bash
+git worktree list              # List all worktrees
+git worktree add ../RHM-dev branch  # Add new worktree (already done)
+git worktree remove ../RHM-dev      # Remove worktree (if needed)
+```
+
+### Branches
 - `main` - Production-ready code
-- `internet-access` - Remote access features (Tailscale)
+- `internet-access` - Development branch
 - `remote-access` - Earlier remote access work
