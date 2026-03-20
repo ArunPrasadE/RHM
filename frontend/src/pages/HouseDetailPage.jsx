@@ -58,7 +58,7 @@ export default function HouseDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 dark:text-gray-400">House not found</p>
-        <Link to="/houses" className="text-primary-500 hover:underline mt-2 inline-block">
+        <Link to="/rental/houses" className="text-primary-500 hover:underline mt-2 inline-block">
           Back to Houses
         </Link>
       </div>
@@ -68,7 +68,7 @@ export default function HouseDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/houses" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+        <Link to="/rental/houses" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>

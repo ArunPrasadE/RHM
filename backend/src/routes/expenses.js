@@ -145,22 +145,40 @@ router.post('/motor-bill', (req, res) => {
       });
 
       // Add to rent if requested
-      if (add_to_rent) {
+      if (add_to_rent && due_date) {
         const currentTenant = db.prepare(`
           SELECT id FROM tenants WHERE house_id = ? AND is_current = 1
         `).get(house.id);
 
         if (currentTenant) {
-          // Find the next unpaid rent payment or create one
+          // Calculate which rent month this expense should go to
+          // If due date is after 9th, add to next month's rent
+          const expenseDate = new Date(due_date);
+          const expenseDay = expenseDate.getDate();
+
+          let rentYear = expenseDate.getFullYear();
+          let rentMonth = expenseDate.getMonth() + 1; // 0-indexed to 1-indexed
+
+          if (expenseDay > 9) {
+            // Add to next month's rent
+            rentMonth += 1;
+            if (rentMonth > 12) {
+              rentMonth = 1;
+              rentYear += 1;
+            }
+          }
+
+          // Find rent payment for the calculated month
           let rentPayment = db.prepare(`
             SELECT * FROM rent_payments
-            WHERE tenant_id = ? AND is_fully_paid = 0
-            ORDER BY due_date ASC
+            WHERE tenant_id = ?
+              AND strftime('%Y', due_date) = ?
+              AND strftime('%m', due_date) = ?
             LIMIT 1
-          `).get(currentTenant.id);
+          `).get(currentTenant.id, String(rentYear), String(rentMonth).padStart(2, '0'));
 
           if (rentPayment) {
-            // Add to existing payment
+            // Add to matching month's payment
             db.prepare(`
               UPDATE rent_payments SET due_amount = due_amount + ? WHERE id = ?
             `).run(splitAmount, rentPayment.id);
@@ -216,18 +234,37 @@ router.post('/water-bill', (req, res) => {
       });
 
       // Add to rent if requested
-      if (add_to_rent) {
+      if (add_to_rent && due_date) {
         const currentTenant = db.prepare(`
           SELECT id FROM tenants WHERE house_id = ? AND is_current = 1
         `).get(house_id);
 
         if (currentTenant) {
+          // Calculate which rent month this expense should go to
+          // If due date is after 9th, add to next month's rent
+          const expenseDate = new Date(due_date);
+          const expenseDay = expenseDate.getDate();
+
+          let rentYear = expenseDate.getFullYear();
+          let rentMonth = expenseDate.getMonth() + 1; // 0-indexed to 1-indexed
+
+          if (expenseDay > 9) {
+            // Add to next month's rent
+            rentMonth += 1;
+            if (rentMonth > 12) {
+              rentMonth = 1;
+              rentYear += 1;
+            }
+          }
+
+          // Find rent payment for the calculated month
           let rentPayment = db.prepare(`
             SELECT * FROM rent_payments
-            WHERE tenant_id = ? AND is_fully_paid = 0
-            ORDER BY due_date ASC
+            WHERE tenant_id = ?
+              AND strftime('%Y', due_date) = ?
+              AND strftime('%m', due_date) = ?
             LIMIT 1
-          `).get(currentTenant.id);
+          `).get(currentTenant.id, String(rentYear), String(rentMonth).padStart(2, '0'));
 
           if (rentPayment) {
             db.prepare(`

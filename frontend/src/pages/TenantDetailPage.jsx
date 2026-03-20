@@ -58,7 +58,7 @@ export default function TenantDetailPage() {
   const handleDelete = async () => {
     try {
       await api.delete(`/tenants/${id}`);
-      navigate('/tenants');
+      navigate('/rental/tenants');
     } catch (error) {
       alert(error.message);
     }
@@ -77,20 +77,71 @@ export default function TenantDetailPage() {
   const getWhatsAppReminderLink = () => {
     if (!tenant || !tenant.phone || tenant.totalPending <= 0) return null;
 
-    const pendingPayment = tenant.payments?.find(p => !p.is_fully_paid);
-    if (!pendingPayment) return null;
+    const pendingPayments = tenant.payments?.filter(p => !p.is_fully_paid) || [];
+    if (pendingPayments.length === 0) return null;
 
-    const message = `Dear ${tenant.name},
+    // Sort by due date (oldest first)
+    pendingPayments.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 
-This is a reminder that your rent of ${formatCurrency(pendingPayment.due_amount)} for house ${tenant.house_number} was due on ${formatDate(pendingPayment.due_date)}.
+    let messageParts = [`Dear ${tenant.name},`];
+    messageParts.push('');
+    messageParts.push(`Rent reminder for house ${tenant.house_number}`);
+    messageParts.push('');
 
-Pending amount: ${formatCurrency(tenant.totalPending)}
+    // Show each pending payment with breakdown
+    pendingPayments.forEach((payment) => {
+      const additions = payment.additions || [];
+      const additionsTotal = additions.reduce((sum, a) => sum + a.amount, 0);
+      const regularRent = payment.due_amount - additionsTotal;
+      const pendingAmount = payment.due_amount - payment.paid_amount;
 
-Please pay at the earliest.
+      if (pendingPayments.length > 1) {
+        messageParts.push(`--- ${formatDate(payment.due_date)} ---`);
+      } else {
+        messageParts.push(`Due Date: ${formatDate(payment.due_date)}`);
+      }
 
-Thank you.`;
+      // Regular rent (only if > 0)
+      if (regularRent > 0) {
+        messageParts.push(`Regular Rent: ${formatCurrency(regularRent)}`);
+      }
 
-    return generateWhatsAppLink(tenant.phone, message);
+      // Additional charges breakdown (only if amount > 0)
+      if (additions.length > 0) {
+        additions.forEach(addition => {
+          if (addition.amount > 0) {
+            const label = addition.source_type === 'motor_bill' ? 'Motor Bill' :
+                          addition.source_type === 'water_bill' ? 'Water Bill' :
+                          addition.source_type === 'maintenance' ? 'Maintenance' :
+                          addition.description || 'Other';
+            messageParts.push(`${label}: ${formatCurrency(addition.amount)}`);
+          }
+        });
+      }
+
+      // Paid amount (only if > 0)
+      if (payment.paid_amount > 0) {
+        messageParts.push(`Paid: ${formatCurrency(payment.paid_amount)}`);
+      }
+
+      // Pending for this month (only if > 0)
+      if (pendingAmount > 0) {
+        messageParts.push(`Pending: ${formatCurrency(pendingAmount)}`);
+      }
+      messageParts.push('');
+    });
+
+    // Total pending (only if > 0)
+    if (tenant.totalPending > 0) {
+      messageParts.push(`*Total Pending: ${formatCurrency(tenant.totalPending)}*`);
+      messageParts.push('');
+    }
+
+    messageParts.push('Please pay at the earliest.');
+    messageParts.push('');
+    messageParts.push('Thank you.');
+
+    return generateWhatsAppLink(tenant.phone, messageParts.join('\n'));
   };
 
   if (loading) {
@@ -105,7 +156,7 @@ Thank you.`;
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 dark:text-gray-400">Tenant not found</p>
-        <Link to="/tenants" className="text-primary-500 hover:underline mt-2 inline-block">
+        <Link to="/rental/tenants" className="text-primary-500 hover:underline mt-2 inline-block">
           Back to Tenants
         </Link>
       </div>
@@ -117,7 +168,7 @@ Thank you.`;
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/tenants" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+        <Link to="/rental/tenants" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>

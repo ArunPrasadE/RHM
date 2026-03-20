@@ -107,10 +107,10 @@ export default function HouseForm({ house, onSave, onClose }) {
                   value={formData.rent_amount}
                   onChange={(e) => setFormData({ ...formData, rent_amount: e.target.value })}
                   className="input"
-                  placeholder="e.g., 8000"
+                  placeholder="e.g., 3750"
                   required
                   min="0"
-                  step="100"
+                  step="1"
                 />
               </div>
             </div>
