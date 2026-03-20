@@ -14,7 +14,7 @@ router.get('/', (req, res) => {
     const { house_id, tenant_id, month, year, status } = req.query;
 
     let query = `
-      SELECT rp.*, t.name as tenant_name, h.house_number,
+      SELECT rp.*, t.name as tenant_name, t.phone as tenant_phone, h.house_number, h.rent_amount as base_rent,
         (SELECT json_group_array(json_object('id', ra.id, 'source_type', ra.source_type, 'amount', ra.amount, 'description', ra.description))
          FROM rent_additions ra WHERE ra.rent_payment_id = rp.id) as additions
       FROM rent_payments rp

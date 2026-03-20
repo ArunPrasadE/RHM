@@ -127,6 +127,148 @@ export function initializeDatabase() {
       file_name TEXT,
       google_drive_id TEXT
     );
+
+    -- =====================
+    -- PADDY FIELD MANAGEMENT
+    -- =====================
+
+    -- Paddy Fields
+    CREATE TABLE IF NOT EXISTS paddy_fields (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      area_cents INTEGER NOT NULL,
+      gps_latitude REAL,
+      gps_longitude REAL,
+      google_maps_url TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Paddy Workers
+    CREATE TABLE IF NOT EXISTS paddy_workers (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      place TEXT,
+      mobile TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Paddy Expenses
+    CREATE TABLE IF NOT EXISTS paddy_expenses (
+      id INTEGER PRIMARY KEY,
+      field_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      crop_number INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      sequence_number INTEGER,
+      amount REAL NOT NULL,
+      expense_date DATE NOT NULL,
+      worker_id INTEGER,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (field_id) REFERENCES paddy_fields(id),
+      FOREIGN KEY (worker_id) REFERENCES paddy_workers(id)
+    );
+
+    -- Paddy Income
+    CREATE TABLE IF NOT EXISTS paddy_income (
+      id INTEGER PRIMARY KEY,
+      field_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      crop_number INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      yield_kg REAL,
+      kottai_count REAL,
+      rate_per_kottai REAL,
+      amount REAL NOT NULL,
+      income_date DATE NOT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (field_id) REFERENCES paddy_fields(id)
+    );
+
+    -- ========================
+    -- COCONUT GROVE MANAGEMENT
+    -- ========================
+
+    -- Coconut Groves
+    CREATE TABLE IF NOT EXISTS coconut_groves (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      area_cents INTEGER NOT NULL,
+      gps_latitude REAL,
+      gps_longitude REAL,
+      google_maps_url TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Coconut Workers
+    CREATE TABLE IF NOT EXISTS coconut_workers (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      place TEXT,
+      mobile TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Coconut Expenses
+    CREATE TABLE IF NOT EXISTS coconut_expenses (
+      id INTEGER PRIMARY KEY,
+      grove_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      amount REAL NOT NULL,
+      expense_date DATE NOT NULL,
+      worker_id INTEGER,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (grove_id) REFERENCES coconut_groves(id),
+      FOREIGN KEY (worker_id) REFERENCES coconut_workers(id)
+    );
+
+    -- Coconut Income
+    CREATE TABLE IF NOT EXISTS coconut_income (
+      id INTEGER PRIMARY KEY,
+      grove_id INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      quantity_kg REAL NOT NULL,
+      rate_per_kg REAL NOT NULL,
+      amount REAL NOT NULL,
+      income_date DATE NOT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (grove_id) REFERENCES coconut_groves(id)
+    );
+
+    -- ========================
+    -- WORKER CATEGORIES
+    -- ========================
+
+    -- Paddy Worker Categories
+    CREATE TABLE IF NOT EXISTS paddy_worker_categories (
+      id INTEGER PRIMARY KEY,
+      value TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      label_tamil TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Coconut Worker Categories
+    CREATE TABLE IF NOT EXISTS coconut_worker_categories (
+      id INTEGER PRIMARY KEY,
+      value TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      label_tamil TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Create default admin user if not exists
@@ -139,6 +281,37 @@ export function initializeDatabase() {
       passwordHash
     );
     console.log('Default admin user created');
+  }
+
+  // Seed default paddy worker categories
+  const paddyCategoriesExist = db.prepare('SELECT COUNT(*) as count FROM paddy_worker_categories').get();
+  if (paddyCategoriesExist.count === 0) {
+    const paddyCategories = [
+      { value: 'supervisor', label: 'Supervisor', label_tamil: 'மேற்பார்வையாளர்' },
+      { value: 'harvester', label: 'Harvester', label_tamil: 'அறுவடையாளர்' },
+      { value: 'tractor_manager', label: 'Tractor Manager', label_tamil: 'டிராக்டர் ஓட்டி' },
+      { value: 'ploughing_manager', label: 'Ploughing Manager', label_tamil: 'உழவர்' }
+    ];
+    const insertPaddyCategory = db.prepare('INSERT INTO paddy_worker_categories (value, label, label_tamil) VALUES (?, ?, ?)');
+    for (const cat of paddyCategories) {
+      insertPaddyCategory.run(cat.value, cat.label, cat.label_tamil);
+    }
+    console.log('Default paddy worker categories created');
+  }
+
+  // Seed default coconut worker categories
+  const coconutCategoriesExist = db.prepare('SELECT COUNT(*) as count FROM coconut_worker_categories').get();
+  if (coconutCategoriesExist.count === 0) {
+    const coconutCategories = [
+      { value: 'thoppu_velai', label: 'Thoppu Velai', label_tamil: 'தோப்பு வேலை' },
+      { value: 'thengai_vettu_virpanai', label: 'Thengai Vettu & Virpanai', label_tamil: 'தேங்காய் வெட்டு மற்றும் விற்பனை' },
+      { value: 'pazhaya_maram_vettu', label: 'Pazhaya Maram Vettu', label_tamil: 'பழைய மரம் வெட்டு' }
+    ];
+    const insertCoconutCategory = db.prepare('INSERT INTO coconut_worker_categories (value, label, label_tamil) VALUES (?, ?, ?)');
+    for (const cat of coconutCategories) {
+      insertCoconutCategory.run(cat.value, cat.label, cat.label_tamil);
+    }
+    console.log('Default coconut worker categories created');
   }
 
   console.log('Database initialized successfully');
