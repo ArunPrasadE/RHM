@@ -109,7 +109,7 @@ export default function HousesPage() {
 
             <div className="flex gap-2 pt-3 border-t dark:border-gray-700">
               <Link
-                to={`/houses/${house.id}`}
+                to={`/rental/houses/${house.id}`}
                 className="flex-1 btn btn-secondary text-center text-sm py-2"
               >
                 View Details

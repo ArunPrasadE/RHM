@@ -1,9 +1,24 @@
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function Navbar({ onMenuClick }) {
+const moduleConfig = {
+  rental: {
+    label: 'RHM',
+    shortLabel: 'RH',
+    bgClass: 'bg-primary-500'
+  },
+  paddy: {
+    label: 'Paddy',
+    shortLabel: 'PF',
+    bgClass: 'bg-green-500'
+  }
+};
+
+export default function Navbar({ onMenuClick, module = 'rental' }) {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+
+  const config = moduleConfig[module] || moduleConfig.rental;
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-sm z-40 h-16">
@@ -20,10 +35,10 @@ export default function Navbar({ onMenuClick }) {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">RH</span>
+            <div className={`w-8 h-8 ${config.bgClass} rounded-lg flex items-center justify-center`}>
+              <span className="text-white font-bold text-sm">{config.shortLabel}</span>
             </div>
-            <span className="font-semibold text-lg hidden sm:block">RHM</span>
+            <span className="font-semibold text-lg hidden sm:block">{config.label}</span>
           </div>
         </div>
 

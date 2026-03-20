@@ -90,25 +90,25 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link to="/houses" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
+        <Link to="/rental/houses" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
             <HouseIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <span className="font-medium">Manage Houses</span>
         </Link>
-        <Link to="/tenants" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
+        <Link to="/rental/tenants" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
           <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
             <UsersIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
           <span className="font-medium">Manage Tenants</span>
         </Link>
-        <Link to="/payments" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
+        <Link to="/rental/payments" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
           <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center">
             <MoneyIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <span className="font-medium">Record Payment</span>
         </Link>
-        <Link to="/expenses" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
+        <Link to="/rental/expenses" className="card hover:shadow-lg transition-shadow flex items-center gap-3">
           <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
             <ExpenseIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Pending Payments</h2>
-            <Link to="/payments" className="text-primary-500 text-sm hover:underline">
+            <Link to="/rental/payments" className="text-primary-500 text-sm hover:underline">
               View All
             </Link>
           </div>
