@@ -28,31 +28,40 @@ const coconutNavigation = [
   { name: 'Reports', nameTamil: 'அறிக்கைகள்', href: '/coconut/reports', icon: ReportIcon },
 ];
 
+const unifiedNavigation = [
+  { name: 'Business Overview', nameTamil: 'வணிக மேலோட்டம்', href: '/dashboard', icon: DashboardIcon },
+];
+
 const moduleColors = {
   rental: 'primary',
   paddy: 'green',
-  coconut: 'amber'
+  coconut: 'amber',
+  unified: 'purple'
 };
 
 const moduleLabels = {
   rental: { name: 'Rental Houses', nameTamil: 'வாடகை வீடுகள்' },
   paddy: { name: 'Paddy Fields', nameTamil: 'நெல் வயல்கள்' },
-  coconut: { name: 'Coconut Groves', nameTamil: 'தென்னந்தோப்புகள்' }
+  coconut: { name: 'Coconut Groves', nameTamil: 'தென்னந்தோப்புகள்' },
+  unified: { name: 'Business Overview', nameTamil: 'வணிக மேலோட்டம்' }
 };
 
 export default function Sidebar({ open, onClose, module = 'rental' }) {
   const navigate = useNavigate();
-  const navigation = module === 'paddy'
-    ? paddyNavigation
-    : module === 'coconut'
-      ? coconutNavigation
-      : rentalNavigation;
+  const navigation = module === 'unified'
+    ? unifiedNavigation
+    : module === 'paddy'
+      ? paddyNavigation
+      : module === 'coconut'
+        ? coconutNavigation
+        : rentalNavigation;
   const color = moduleColors[module] || 'primary';
   const label = moduleLabels[module] || moduleLabels.rental;
 
   const activeClassesMap = {
     green: 'bg-green-50 text-green-600 dark:bg-green-900/50 dark:text-green-400',
     amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400',
+    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400',
     primary: 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400'
   };
   const activeClasses = activeClassesMap[color] || activeClassesMap.primary;
@@ -80,9 +89,11 @@ export default function Sidebar({ open, onClose, module = 'rental' }) {
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              color === 'green' ? 'bg-green-500' : color === 'amber' ? 'bg-amber-500' : 'bg-primary-500'
+              color === 'green' ? 'bg-green-500' : color === 'amber' ? 'bg-amber-500' : color === 'purple' ? 'bg-purple-500' : 'bg-primary-500'
             }`}>
-              {module === 'paddy' ? (
+              {module === 'unified' ? (
+                <DashboardIcon className="w-4 h-4 text-white" />
+              ) : module === 'paddy' ? (
                 <PaddyIcon className="w-4 h-4 text-white" />
               ) : module === 'coconut' ? (
                 <CoconutIcon className="w-4 h-4 text-white" />
