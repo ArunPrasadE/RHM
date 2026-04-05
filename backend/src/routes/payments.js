@@ -1,7 +1,7 @@
 import express from 'express';
 import db from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { generateMissingRentRecords } from '../utils/scheduler.js';
+import { generateMissingRentRecords, generateCurrentMonthRent } from '../utils/scheduler.js';
 
 const router = express.Router();
 
@@ -316,6 +316,24 @@ router.post('/generate-monthly', (req, res) => {
   } catch (error) {
     console.error('Error generating monthly payments:', error);
     res.status(500).json({ error: 'Failed to generate monthly payments' });
+  }
+});
+
+// POST /api/payments/generate-current-month - Manually generate rent for current month
+router.post('/generate-current-month', (req, res) => {
+  try {
+    const result = generateCurrentMonthRent();
+    const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    res.json({
+      message: `Rent generation complete for ${currentMonth}`,
+      created: result.created,
+      skipped: result.skipped,
+      details: `${result.created} new rent record(s) created, ${result.skipped} already existed`
+    });
+  } catch (error) {
+    console.error('Error generating current month rent:', error);
+    res.status(500).json({ error: 'Failed to generate current month rent records' });
   }
 });
 

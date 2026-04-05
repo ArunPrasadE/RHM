@@ -10,6 +10,7 @@ export default function PaymentsPage() {
   const [filter, setFilter] = useState('pending');
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -54,6 +55,23 @@ export default function PaymentsPage() {
       setSelectedTenant(null);
     } catch (error) {
       alert(error.message);
+    }
+  };
+
+  const handleGenerateRent = async () => {
+    if (!confirm('Generate rent records for current month for all tenants?\n\nNote: Existing records will not be duplicated.')) {
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const result = await api.post('/payments/generate-current-month');
+      alert(`${result.message}\n\n${result.details}`);
+      fetchData(); // Refresh the payments list
+    } catch (error) {
+      alert(`Failed to generate rent: ${error.message}`);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -147,36 +165,63 @@ export default function PaymentsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payments</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => setFilter('pending')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'pending'
-                ? 'bg-amber-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
+            onClick={handleGenerateRent}
+            disabled={generating}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            title="Generate rent records for current month"
           >
-            Pending
-          </button>
-          <button
-            onClick={() => setFilter('paid')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'paid'
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Paid
-          </button>
-          <button
-            onClick={() => setFilter('')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === ''
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            All
+            {generating ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generating...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Generate Rent
+              </>
+            )}
           </button>
         </div>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('pending')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            filter === 'pending'
+              ? 'bg-amber-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Pending
+        </button>
+        <button
+          onClick={() => setFilter('paid')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            filter === 'paid'
+              ? 'bg-green-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Paid
+        </button>
+        <button
+          onClick={() => setFilter('')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            filter === ''
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          All
+        </button>
       </div>
 
       {/* Payments List */}
