@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api, { formatCurrency, formatDate } from '../utils/api';
+import TenantForm from '../components/Tenants/TenantForm';
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('current');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
     fetchTenants();
@@ -23,6 +25,16 @@ export default function TenantsPage() {
     }
   };
 
+  const handleAddTenant = async (tenantData) => {
+    try {
+      await api.post('/tenants', tenantData);
+      fetchTenants();
+      setShowAddForm(false);
+    } catch (error) {
+      alert(error.message || 'Failed to add tenant');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -33,28 +45,39 @@ export default function TenantsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tenants</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+            <button
+              onClick={() => setFilter('current')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                filter === 'current'
+                  ? 'bg-white text-primary-600 shadow-sm dark:bg-gray-700 dark:text-primary-400'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              Current
+            </button>
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                filter === 'all'
+                  ? 'bg-white text-primary-600 shadow-sm dark:bg-gray-700 dark:text-primary-400'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              All
+            </button>
+          </div>
           <button
-            onClick={() => setFilter('current')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'current'
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
+            onClick={() => setShowAddForm(true)}
+            className="btn btn-primary flex items-center gap-2"
           >
-            Current
-          </button>
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'all'
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            All
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Tenant
           </button>
         </div>
       </div>
@@ -122,6 +145,13 @@ export default function TenantsPage() {
           </div>
         )}
       </div>
+      {/* Tenant Form Modal */}
+      {showAddForm && (
+        <TenantForm
+          onSave={handleAddTenant}
+          onClose={() => setShowAddForm(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../../utils/api';
 
-export default function TenantForm({ houseId, tenant, onSave, onClose }) {
+export default function TenantForm({ houseId: initialHouseId, tenant, onSave, onClose }) {
+  const [houses, setHouses] = useState([]);
   const [formData, setFormData] = useState({
+    house_id: initialHouseId || tenant?.house_id || '',
     name: tenant?.name || '',
     phone: tenant?.phone || '',
     id_proof_number: tenant?.id_proof_number || '',
@@ -12,14 +15,40 @@ export default function TenantForm({ houseId, tenant, onSave, onClose }) {
     advance_date: tenant?.advance_date?.split('T')[0] || new Date().toISOString().split('T')[0]
   });
   const [loading, setLoading] = useState(false);
+  const [fetchingHouses, setFetchingHouses] = useState(false);
+
+  useEffect(() => {
+    if (!initialHouseId && !tenant) {
+      fetchHouses();
+    }
+  }, [initialHouseId, tenant]);
+
+  const fetchHouses = async () => {
+    setFetchingHouses(true);
+    try {
+      const data = await api.get('/houses');
+      // Only show active houses that don't have a current tenant
+      const availableHouses = data.filter(h => h.is_active && !h.has_tenant);
+      setHouses(availableHouses);
+    } catch (error) {
+      console.error('Failed to fetch houses:', error);
+    } finally {
+      setFetchingHouses(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.house_id) {
+      alert('Please select a house');
+      return;
+    }
     setLoading(true);
 
     try {
       await onSave({
         ...formData,
+        house_id: parseInt(formData.house_id),
         household_members: formData.household_members ? parseInt(formData.household_members) : null,
         advance_amount: formData.advance_amount ? parseFloat(formData.advance_amount) : null
       });
@@ -47,6 +76,32 @@ export default function TenantForm({ houseId, tenant, onSave, onClose }) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!initialHouseId && !tenant && (
+              <div>
+                <label className="label">Assign House *</label>
+                {fetchingHouses ? (
+                  <div className="text-sm text-gray-500">Loading available houses...</div>
+                ) : (
+                  <select
+                    value={formData.house_id}
+                    onChange={(e) => setFormData({ ...formData, house_id: e.target.value })}
+                    className="input"
+                    required
+                  >
+                    <option value="">Select a house</option>
+                    {houses.map((house) => (
+                      <option key={house.id} value={house.id}>
+                        {house.house_number} - {house.type}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {houses.length === 0 && !fetchingHouses && (
+                  <p className="text-xs text-red-500 mt-1">No vacant houses available</p>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="label">Name *</label>
               <input
