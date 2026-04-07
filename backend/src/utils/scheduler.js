@@ -75,12 +75,17 @@ export function generateMissingRentRecords() {
 
 /**
  * Generate rent records for current month only
- * Used by monthly cron job
- * - If tenant moved in last month after 15th, this is their first rent (half amount)
+ * Used by monthly cron job on 1st of each month at 00:05 AM IST
+ * 
+ * Rules:
+ * - First rent is always for the NEXT month after move-in (not move-in month)
+ * - If tenant moved in previous month after 15th: half rent for current month
+ * - If tenant moved in previous month on/before 15th: full rent for current month
+ * - For all other tenants: full rent
  */
 export function generateCurrentMonthRent() {
   const now = new Date();
-  const dueDate = new Date(now.getFullYear(), now.getMonth(), 10);
+  const dueDate = new Date(now.getFullYear(), now.getMonth(), 10); // 10th of current month
   const dueDateStr = dueDate.toISOString().split('T')[0];
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -99,6 +104,15 @@ export function generateCurrentMonthRent() {
   let skipped = 0;
 
   for (const tenant of currentTenants) {
+    const moveInDate = new Date(tenant.move_in_date);
+    const moveInYearMonth = `${moveInDate.getFullYear()}-${String(moveInDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Skip if tenant moved in current month (first rent is next month)
+    if (moveInYearMonth === yearMonth) {
+      skipped++;
+      continue;
+    }
+
     // Check if record already exists for this month
     const existing = db.prepare(`
       SELECT id FROM rent_payments
@@ -107,8 +121,6 @@ export function generateCurrentMonthRent() {
 
     if (!existing) {
       // Check if this is tenant's first rent (moved in last month)
-      const moveInDate = new Date(tenant.move_in_date);
-      const moveInYearMonth = `${moveInDate.getFullYear()}-${String(moveInDate.getMonth() + 1).padStart(2, '0')}`;
       const isFirstRent = (moveInYearMonth === prevYearMonth);
       const moveInDay = moveInDate.getDate();
 

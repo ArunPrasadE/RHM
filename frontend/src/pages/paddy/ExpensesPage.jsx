@@ -488,18 +488,33 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               </div>
             )}
 
-            <div>
-              <label className="label">Crop (பயிர்) *</label>
-              <select
-                value={formData.crop_number}
-                onChange={(e) => setFormData({ ...formData, crop_number: parseInt(e.target.value) })}
-                className="input"
-                required
-                disabled={isGrouped}
-              >
-                <option value={1}>Crop 1</option>
-                <option value={2}>Crop 2</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Year (ஆண்டு) *</label>
+                <input
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                  className="input"
+                  min="2000"
+                  max="2100"
+                  required
+                  disabled={isGrouped}
+                />
+              </div>
+              <div>
+                <label className="label">Crop (பயிர்) *</label>
+                <select
+                  value={formData.crop_number}
+                  onChange={(e) => setFormData({ ...formData, crop_number: parseInt(e.target.value) })}
+                  className="input"
+                  required
+                  disabled={isGrouped}
+                >
+                  <option value={1}>Crop 1</option>
+                  <option value={2}>Crop 2</option>
+                </select>
+              </div>
             </div>
 
             <div>
