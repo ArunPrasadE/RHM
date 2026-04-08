@@ -141,14 +141,27 @@ router.put('/grouped', (req, res) => {
       crop_number,
       new_total_amount,
       worker_id,
-      notes
+      notes,
+      // Old values to find the group
+      old_category,
+      old_sequence_number,
+      old_expense_date,
+      old_year,
+      old_crop_number
     } = req.body;
 
-    if (!category || !expense_date || !year || !crop_number || !new_total_amount) {
-      return res.status(400).json({ error: 'Category, date, year, crop number, and new total amount are required' });
+    if (!new_total_amount) {
+      return res.status(400).json({ error: 'New total amount is required' });
     }
 
-    // Find all related expenses
+    // Use old values to find the group, or current values if not provided
+    const searchCategory = old_category ?? category;
+    const searchSequence = old_sequence_number ?? sequence_number;
+    const searchDate = old_expense_date ?? expense_date;
+    const searchYear = old_year ?? year;
+    const searchCrop = old_crop_number ?? crop_number;
+
+    // Find all related expenses using OLD values
     const relatedExpenses = db.prepare(`
       SELECT pe.*, pf.area_cents
       FROM paddy_expenses pe
@@ -158,7 +171,7 @@ router.put('/grouped', (req, res) => {
         AND pe.expense_date = ?
         AND pe.year = ?
         AND pe.crop_number = ?
-    `).all(category, sequence_number || null, expense_date, year, crop_number);
+    `).all(searchCategory, searchSequence || null, searchDate, searchYear, searchCrop);
 
     if (relatedExpenses.length === 0) {
       return res.status(404).json({ error: 'No related expenses found' });
@@ -167,10 +180,10 @@ router.put('/grouped', (req, res) => {
     // Calculate total area from related expenses
     const totalAreaCents = relatedExpenses.reduce((sum, e) => sum + e.area_cents, 0);
 
-    // Update all related expenses with new proportional amounts
+    // Update all related expenses with new values
     const updateStmt = db.prepare(`
       UPDATE paddy_expenses
-      SET amount = ?, worker_id = ?, notes = ?
+      SET year = ?, crop_number = ?, category = ?, sequence_number = ?, amount = ?, expense_date = ?, worker_id = ?, notes = ?
       WHERE id = ?
     `);
 
@@ -178,7 +191,12 @@ router.put('/grouped', (req, res) => {
       for (const expense of relatedExpenses) {
         const newAmount = Math.round((new_total_amount / totalAreaCents * expense.area_cents) * 100) / 100;
         updateStmt.run(
+          year ?? expense.year,
+          crop_number ?? expense.crop_number,
+          category ?? expense.category,
+          sequence_number ?? expense.sequence_number,
           newAmount,
+          expense_date ?? expense.expense_date,
           worker_id ?? expense.worker_id,
           notes ?? expense.notes,
           expense.id
@@ -194,7 +212,8 @@ router.put('/grouped', (req, res) => {
     });
   } catch (error) {
     console.error('Error updating grouped expenses:', error);
-    res.status(500).json({ error: 'Failed to update grouped expenses' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to update grouped expenses', details: error.message });
   }
 });
 

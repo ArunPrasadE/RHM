@@ -96,7 +96,13 @@ export default function ExpensesPage() {
       ...group,
       isGrouped: true,
       year: filterYear,
-      crop_number: filterCrop
+      crop_number: filterCrop,
+      // Store original values for finding the group
+      original_category: group.category,
+      original_sequence_number: group.sequence_number,
+      original_expense_date: group.expense_date,
+      original_year: filterYear,
+      original_crop_number: filterCrop
     });
     setShowForm(true);
   };
@@ -330,7 +336,7 @@ export default function ExpensesPage() {
               fetchData();
             } catch (error) {
               console.error('Failed to save expense:', error);
-              alert('Failed to save expense');
+              alert(`Failed to save expense: ${error.message || error}`);
             }
           }}
           onClose={() => { setShowForm(false); setEditingExpense(null); }}
@@ -409,14 +415,21 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
       if (isGrouped) {
         // When editing grouped, update all related expenses with new total
         await onSave({
+          // New values
           category: formData.category,
           sequence_number: formData.sequence_number ? parseInt(formData.sequence_number) : null,
           expense_date: formData.expense_date,
-          year: formData.year,
-          crop_number: formData.crop_number,
+          year: parseInt(formData.year),
+          crop_number: parseInt(formData.crop_number),
           new_total_amount: parseFloat(formData.total_amount),
           worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
-          notes: formData.notes
+          notes: formData.notes,
+          // Old values for finding the group
+          old_category: expense?.original_category,
+          old_sequence_number: expense?.original_sequence_number,
+          old_expense_date: expense?.original_expense_date,
+          old_year: expense?.original_year,
+          old_crop_number: expense?.original_crop_number
         });
       } else if (isEditing) {
         // When editing single expense
