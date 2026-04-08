@@ -499,7 +499,6 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                   min="2000"
                   max="2100"
                   required
-                  disabled={isGrouped}
                 />
               </div>
               <div>
@@ -509,7 +508,6 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                   onChange={(e) => setFormData({ ...formData, crop_number: parseInt(e.target.value) })}
                   className="input"
                   required
-                  disabled={isGrouped}
                 >
                   <option value={1}>Crop 1</option>
                   <option value={2}>Crop 2</option>
@@ -522,9 +520,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               <select
                 value={formData.category}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className={`input ${isGrouped ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                className="input"
                 required
-                disabled={isGrouped}
               >
                 <option value="">Select category</option>
                 {categories.map(c => (
@@ -539,9 +536,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                 <select
                   value={formData.sequence_number}
                   onChange={(e) => setFormData({ ...formData, sequence_number: e.target.value })}
-                  className={`input ${isGrouped ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                  className="input"
                   required
-                  disabled={isGrouped}
                 >
                   <option value="">Select</option>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
@@ -590,9 +586,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                   type="date"
                   value={formData.expense_date}
                   onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
-                  className={`input ${isGrouped ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                  className="input"
                   required
-                  disabled={isGrouped}
                 />
               </div>
             </div>
