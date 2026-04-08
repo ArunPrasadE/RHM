@@ -219,18 +219,19 @@ router.put('/:id', (req, res) => {
       return res.status(404).json({ error: 'Expense not found' });
     }
 
+    // Use nullish coalescing for proper handling of all values including 0
     db.prepare(`
       UPDATE paddy_expenses
       SET field_id = ?, year = ?, crop_number = ?, category = ?, sequence_number = ?, amount = ?, expense_date = ?, worker_id = ?, notes = ?
       WHERE id = ?
     `).run(
-      field_id || existing.field_id,
-      year || existing.year,
-      crop_number || existing.crop_number,
-      category || existing.category,
+      field_id ?? existing.field_id,
+      year ?? existing.year,
+      crop_number ?? existing.crop_number,
+      category ?? existing.category,
       sequence_number ?? existing.sequence_number,
-      amount || existing.amount,
-      expense_date || existing.expense_date,
+      amount ?? existing.amount,
+      expense_date ?? existing.expense_date,
       worker_id ?? existing.worker_id,
       notes ?? existing.notes,
       req.params.id

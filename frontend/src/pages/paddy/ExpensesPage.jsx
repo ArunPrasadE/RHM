@@ -422,8 +422,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
         // When editing single expense
         await onSave({
           field_id: parseInt(formData.field_id),
-          year: formData.year,
-          crop_number: formData.crop_number,
+          year: parseInt(formData.year),
+          crop_number: parseInt(formData.crop_number),
           category: formData.category,
           sequence_number: formData.sequence_number ? parseInt(formData.sequence_number) : null,
           worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
