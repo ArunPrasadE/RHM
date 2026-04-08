@@ -213,10 +213,20 @@ router.put('/:id', (req, res) => {
       notes
     } = req.body;
 
+    console.log('Update expense request:', { id: req.params.id, body: req.body }); // Debug log
+
     const existing = db.prepare('SELECT * FROM paddy_expenses WHERE id = ?').get(req.params.id);
 
     if (!existing) {
       return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    // Validate required fields
+    if (!field_id || !year || !crop_number || !category || !amount || !expense_date) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['field_id', 'year', 'crop_number', 'category', 'amount', 'expense_date']
+      });
     }
 
     // Use nullish coalescing for proper handling of all values including 0
@@ -238,10 +248,12 @@ router.put('/:id', (req, res) => {
     );
 
     const updated = db.prepare('SELECT * FROM paddy_expenses WHERE id = ?').get(req.params.id);
+    console.log('Expense updated successfully:', updated); // Debug log
     res.json(updated);
   } catch (error) {
     console.error('Error updating expense:', error);
-    res.status(500).json({ error: 'Failed to update expense' });
+    console.error('Error stack:', error.stack); // More detailed error
+    res.status(500).json({ error: 'Failed to update expense', details: error.message });
   }
 });
 

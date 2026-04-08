@@ -420,7 +420,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
         });
       } else if (isEditing) {
         // When editing single expense
-        await onSave({
+        const payload = {
           field_id: parseInt(formData.field_id),
           year: parseInt(formData.year),
           crop_number: parseInt(formData.crop_number),
@@ -429,8 +429,11 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
           worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
           amount: parseFloat(formData.amount),
           expense_date: formData.expense_date,
-          notes: formData.notes
-        });
+          notes: formData.notes || ''
+        };
+        
+        console.log('Updating expense with data:', payload); // Debug log
+        await onSave(payload);
       } else {
         // When adding new, split across fields
         await onSave({
