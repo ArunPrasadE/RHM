@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout/Layout';
 import LoginPage from './pages/LoginPage';
 import ModuleSelectorPage from './pages/ModuleSelectorPage';
+import UnifiedDashboard from './pages/UnifiedDashboard';
 import DashboardPage from './pages/DashboardPage';
 import HousesPage from './pages/HousesPage';
 import HouseDetailPage from './pages/HouseDetailPage';
@@ -58,6 +59,15 @@ function App() {
           <ModuleSelectorPage />
         </PrivateRoute>
       } />
+
+      {/* Unified Dashboard */}
+      <Route path="/dashboard" element={
+        <PrivateRoute>
+          <Layout module="unified" />
+        </PrivateRoute>
+      }>
+        <Route index element={<UnifiedDashboard />} />
+      </Route>
 
       {/* Rental Module */}
       <Route path="/rental" element={

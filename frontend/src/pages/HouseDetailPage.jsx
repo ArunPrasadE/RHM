@@ -166,7 +166,7 @@ export default function HouseDetailPage() {
                   )}
                 </div>
                 <Link
-                  to={`/tenants/${house.currentTenant.id}`}
+                  to={`/rental/tenants/${house.currentTenant.id}`}
                   className="btn btn-secondary text-sm"
                 >
                   View Details

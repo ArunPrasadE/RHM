@@ -18,6 +18,7 @@ import maintenanceRoutes from './routes/maintenance.js';
 import notificationsRoutes from './routes/notifications.js';
 import reportsRoutes from './routes/reports.js';
 import backupRoutes from './routes/backup.js';
+import unifiedRoutes from './routes/unified.js';
 
 // Paddy module routes
 import paddyFieldsRoutes from './routes/paddy/fields.js';
@@ -59,6 +60,7 @@ app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/unified', unifiedRoutes);
 
 // API Routes - Paddy Module
 app.use('/api/paddy/fields', paddyFieldsRoutes);
