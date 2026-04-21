@@ -105,7 +105,8 @@ router.post('/', (req, res) => {
     res.status(201).json(newIncome);
   } catch (error) {
     console.error('Error creating income:', error);
-    res.status(500).json({ error: 'Failed to create income' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to create income', details: error.message });
   }
 });
 
