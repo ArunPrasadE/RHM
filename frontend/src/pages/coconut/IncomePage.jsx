@@ -206,7 +206,7 @@ export default function IncomePage() {
               fetchData();
             } catch (error) {
               console.error('Failed to save income:', error);
-              alert('Failed to save income');
+              alert(`Failed to save income: ${error.message || error}`);
             }
           }}
           onClose={() => { setShowForm(false); setEditingIncome(null); }}
