@@ -232,6 +232,18 @@ router.delete('/:id', (req, res) => {
 // GET /api/coconut/expenses/categories - List all custom expense categories
 router.get('/categories', (req, res) => {
   try {
+    // Check if table exists, create if not
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='coconut_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS coconut_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+    }
     const categories = db.prepare('SELECT * FROM coconut_expense_categories WHERE is_active = 1 ORDER BY label').all();
     res.json(categories);
   } catch (error) {
@@ -249,10 +261,24 @@ router.post('/categories', (req, res) => {
       return res.status(400).json({ error: 'Value and label are required' });
     }
 
-    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE value = ?').get(value);
+    // Check if table exists, create if not
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='coconut_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS coconut_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+    }
+
+    // Check case-insensitively for existing
+    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
     if (existing) {
       if (existing.is_active === 0) {
-        db.prepare('UPDATE coconut_expense_categories SET is_active = 1 WHERE id = ?').run(existing.id);
+        db.prepare('UPDATE coconut_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
         const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(existing.id);
         return res.status(201).json(updated);
       }
