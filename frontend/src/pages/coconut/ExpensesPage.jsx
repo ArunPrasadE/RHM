@@ -36,16 +36,19 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      const [expensesData, grovesData, workersData, categoriesData] = await Promise.all([
+      console.log('Fetching categories...');
+      const categoriesRes = await api.get('/coconut/expenses/categories');
+      console.log('Categories fetched:', categoriesRes);
+      
+      const [expensesData, grovesData, workersData] = await Promise.all([
         api.get(`/coconut/expenses?year=${filterYear}${filterGrove !== 'all' ? `&grove_id=${filterGrove}` : ''}`),
         api.get('/coconut/groves'),
-        api.get('/coconut/workers'),
-        api.get('/coconut/expenses/categories')
+        api.get('/coconut/workers')
       ]);
       setExpenses(expensesData);
       setGroves(grovesData);
       setWorkers(workersData);
-      setCustomCategories(categoriesData);
+      setCustomCategories(categoriesRes);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -334,7 +337,7 @@ export default function ExpensesPage() {
               } else {
                 await api.post('/coconut/expenses/categories', data);
               }
-              fetchData();
+              await fetchData();
             } catch (error) {
               console.error('Failed to save category:', error);
               alert(`Failed to save category: ${error.message || error}`);
@@ -343,7 +346,7 @@ export default function ExpensesPage() {
           onDelete={async (id) => {
             try {
               await api.delete(`/coconut/expenses/categories/${id}`);
-              fetchData();
+              await fetchData();
             } catch (error) {
               console.error('Failed to delete category:', error);
               alert(`Failed to delete category: ${error.message || error}`);
