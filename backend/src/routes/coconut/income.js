@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
         if (!colNames.includes('sale_time')) {
           db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
         }
-        console.log('Migration completed');
+        console.log('Migration completed, now columns:', db.prepare("PRAGMA table_info(coconut_income)").all().map(c => c.name));
       } catch (e) {
         console.log('Migration error:', e.message);
       }
@@ -100,11 +100,34 @@ router.post('/', (req, res) => {
     const { grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes } = req.body;
     console.log('POST income payload:', JSON.stringify(req.body));
 
-    // Simple insert with all new fields
+    // Ensure columns exist (migration on POST)
+    const migrate = () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info(coconut_income)").all();
+        const colNames = tableInfo.map(c => c.name);
+        if (!colNames.includes('unit_type')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
+        }
+        if (!colNames.includes('quantity_count')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
+        }
+        if (!colNames.includes('rate_per_unit')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
+        }
+        if (!colNames.includes('sale_time')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
+        }
+      } catch (e) {
+        // Ignore migration errors
+      }
+    };
+    migrate();
+
+    // Insert with all fields including rate_per_kg for old table
     const result = db.prepare(`
-      INSERT INTO coconut_income (grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(grove_id, year, category, unit_type || 'kg', quantity_kg || null, quantity_count || null, rate_per_unit, amount, income_date, sale_time || null, notes || null);
+      INSERT INTO coconut_income (grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, rate_per_kg, amount, income_date, sale_time, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(grove_id, year, category, unit_type || 'kg', quantity_kg || null, quantity_count || null, rate_per_unit, rate_per_unit, amount, income_date, sale_time || null, notes || null);
 
     const newIncome = db.prepare('SELECT * FROM coconut_income WHERE id = ?').get(result.lastInsertRowid);
     console.log('Income saved:', newIncome);
