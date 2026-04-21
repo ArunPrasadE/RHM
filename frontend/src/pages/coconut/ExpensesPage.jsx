@@ -25,6 +25,7 @@ export default function ExpensesPage() {
   const [filterGrove, setFilterGrove] = useState('all');
 
   const allCategories = [...EXPENSE_CATEGORIES, ...customCategories.map(c => ({
+    id: c.id,
     value: c.value,
     label: c.label,
     labelTamil: c.label_tamil || ''
@@ -36,9 +37,7 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      alert('API call starting...');
-      const categoriesRes = await api.get(`/coconut/expenses/categories`);
-      alert('API returned: ' + JSON.stringify(categoriesRes));
+      const categoriesRes = await api.get('/coconut/expenses/categories');
       
       const [expensesData, grovesData, workersData] = await Promise.all([
         api.get(`/coconut/expenses?year=${filterYear}${filterGrove !== 'all' ? `&grove_id=${filterGrove}` : ''}`),
@@ -50,7 +49,6 @@ export default function ExpensesPage() {
       setWorkers(workersData);
       setCustomCategories(categoriesRes || []);
     } catch (error) {
-      alert('Error: ' + error.message);
       console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
@@ -331,6 +329,7 @@ export default function ExpensesPage() {
       {showCategoryForm && (
         <CategoryManagerModal
           categories={customCategories}
+          allCategories={allCategories}
           onRefresh={fetchData}
           onSave={async (data) => {
             try {
@@ -600,7 +599,7 @@ function DeleteIcon({ className }) {
   );
 }
 
-function CategoryManagerModal({ categories, onRefresh, onSave, onDelete, onClose }) {
+function CategoryManagerModal({ categories, allCategories, onRefresh, onSave, onDelete, onClose }) {
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({
     value: '',
@@ -688,26 +687,28 @@ function CategoryManagerModal({ categories, onRefresh, onSave, onDelete, onClose
 
           <div className="border-t dark:border-gray-700 pt-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium">Existing Categories:</h3>
+              <h3 className="font-medium">All Categories:</h3>
               <button onClick={onRefresh} className="text-blue-600 text-sm hover:underline">
                 Refresh
               </button>
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {categories.length === 0 ? (
-                <p className="text-gray-500 text-sm">No custom categories yet</p>
+              {allCategories.length === 0 ? (
+                <p className="text-gray-500 text-sm">No categories available</p>
               ) : (
-                categories.map(cat => (
-                  <div key={cat.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                    <span>{cat.label} ({cat.label_tamil || cat.value})</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleEdit(cat)} className="text-blue-600 hover:text-blue-800 text-sm">
-                        Edit
-                      </button>
-                      <button onClick={() => onDelete(cat.id)} className="text-red-600 hover:text-red-800 text-sm">
-                        Delete
-                      </button>
-                    </div>
+                allCategories.map(cat => (
+                  <div key={cat.value} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                    <span>{cat.label} ({cat.labelTamil || cat.value})</span>
+                    {cat.id && (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(cat)} className="text-blue-600 hover:text-blue-800 text-sm">
+                          Edit
+                        </button>
+                        <button onClick={() => onDelete(cat.id)} className="text-red-600 hover:text-red-800 text-sm">
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
