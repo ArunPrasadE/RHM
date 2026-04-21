@@ -218,6 +218,12 @@ export default function IncomePage() {
 
 function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }) {
   const isEditing = !!income;
+  
+  const getCurrentTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  };
+  
   const [formData, setFormData] = useState({
     grove_id: income?.grove_id || groves[0]?.id || '',
     year: income?.year || defaultYear,
@@ -227,7 +233,7 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
     quantity_count: income?.quantity_count || '',
     rate_per_unit: income?.rate_per_unit || '',
     income_date: income?.income_date || new Date().toISOString().split('T')[0],
-    sale_time: income?.sale_time || '',
+    sale_time: income?.sale_time || (isEditing ? income?.sale_time : getCurrentTime()),
     notes: income?.notes || ''
   });
   const [loading, setLoading] = useState(false);
