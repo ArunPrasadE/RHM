@@ -124,10 +124,11 @@ router.post('/', (req, res) => {
     migrate();
 
     // Insert with all fields including rate_per_kg for old table
+    const finalQtyKg = unit_type === 'count' ? 0 : (quantity_kg || 0);
     const result = db.prepare(`
       INSERT INTO coconut_income (grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, rate_per_kg, amount, income_date, sale_time, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(grove_id, year, category, unit_type || 'kg', quantity_kg || null, quantity_count || null, rate_per_unit, rate_per_unit, amount, income_date, sale_time || null, notes || null);
+    `).run(grove_id, year, category, unit_type || 'kg', finalQtyKg, quantity_count || null, rate_per_unit, rate_per_unit, amount, income_date, sale_time || null, notes || null);
 
     const newIncome = db.prepare('SELECT * FROM coconut_income WHERE id = ?').get(result.lastInsertRowid);
     console.log('Income saved:', newIncome);
