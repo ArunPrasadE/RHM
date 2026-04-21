@@ -153,14 +153,16 @@ export default function IncomePage() {
             <tbody>
               {incomes.map((income) => (
                 <tr key={income.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="py-3 px-2">{income.income_date}</td>
+                  <td className="py-3 px-2">{income.income_date}{income.sale_time ? ` ${income.sale_time}` : ''}</td>
                   <td className="py-3 px-2">{getGroveName(income.grove_id)}</td>
                   <td className="py-3 px-2">{getCategoryLabel(income.category)}</td>
                   <td className="py-3 px-2 text-right">
-                    {income.quantity_kg ? `${income.quantity_kg} kg` : '-'}
+                    {income.unit_type === 'count' 
+                      ? (income.quantity_count ? `${income.quantity_count} nos` : '-')
+                      : (income.quantity_kg ? `${income.quantity_kg} kg` : '-')}
                   </td>
                   <td className="py-3 px-2 text-right">
-                    {income.rate_per_kg ? formatCurrency(income.rate_per_kg) : '-'}
+                    {formatCurrency(income.rate_per_unit || income.rate_per_kg || 0)}
                   </td>
                   <td className="py-3 px-2 text-right font-medium text-green-600 dark:text-green-400">
                     {formatCurrency(income.amount)}
