@@ -36,16 +36,9 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      console.log('Fetching categories...');
-      const categoriesRes = await api.get(`/coconut/expenses/categories?t=${Date.now()}`);
-      console.log('Categories fetched:', categoriesRes);
-      alert('Categories: ' + JSON.stringify(categoriesRes));
-      
-      if (categoriesRes && categoriesRes.length > 0) {
-        console.log('Categories found:', categoriesRes.length);
-      } else {
-        console.log('No categories returned');
-      }
+      alert('API call starting...');
+      const categoriesRes = await api.get(`/coconut/expenses/categories`);
+      alert('API returned: ' + JSON.stringify(categoriesRes));
       
       const [expensesData, grovesData, workersData] = await Promise.all([
         api.get(`/coconut/expenses?year=${filterYear}${filterGrove !== 'all' ? `&grove_id=${filterGrove}` : ''}`),
@@ -57,6 +50,7 @@ export default function ExpensesPage() {
       setWorkers(workersData);
       setCustomCategories(categoriesRes || []);
     } catch (error) {
+      alert('Error: ' + error.message);
       console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
