@@ -222,16 +222,25 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
     grove_id: income?.grove_id || groves[0]?.id || '',
     year: income?.year || defaultYear,
     category: income?.category || 'thengai',
+    unit_type: income?.unit_type || 'kg',
     quantity_kg: income?.quantity_kg || '',
-    rate_per_kg: income?.rate_per_kg || '',
+    quantity_count: income?.quantity_count || '',
+    rate_per_unit: income?.rate_per_unit || '',
     income_date: income?.income_date || new Date().toISOString().split('T')[0],
+    sale_time: income?.sale_time || '',
     notes: income?.notes || ''
   });
   const [loading, setLoading] = useState(false);
 
-  const calculatedAmount = formData.quantity_kg && formData.rate_per_kg
-    ? (parseFloat(formData.quantity_kg) * parseFloat(formData.rate_per_kg)).toFixed(2)
-    : '';
+  const calculatedAmount = (() => {
+    if (formData.unit_type === 'kg' && formData.quantity_kg && formData.rate_per_unit) {
+      return (parseFloat(formData.quantity_kg) * parseFloat(formData.rate_per_unit)).toFixed(2);
+    }
+    if (formData.unit_type === 'count' && formData.quantity_count && formData.rate_per_unit) {
+      return (parseFloat(formData.quantity_count) * parseFloat(formData.rate_per_unit)).toFixed(2);
+    }
+    return '';
+  })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -241,10 +250,13 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
         grove_id: parseInt(formData.grove_id),
         year: formData.year,
         category: formData.category,
-        quantity_kg: parseFloat(formData.quantity_kg),
-        rate_per_kg: parseFloat(formData.rate_per_kg),
+        unit_type: formData.unit_type,
+        quantity_kg: formData.unit_type === 'kg' ? parseFloat(formData.quantity_kg) : null,
+        quantity_count: formData.unit_type === 'count' ? parseInt(formData.quantity_count) : null,
+        rate_per_unit: parseFloat(formData.rate_per_unit),
         amount: parseFloat(calculatedAmount),
         income_date: formData.income_date,
+        sale_time: formData.sale_time || null,
         notes: formData.notes
       };
 
@@ -299,28 +311,63 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
               </div>
             </div>
 
+            <div>
+              <label className="label">Unit Type (அலகு) *</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="unit_type"
+                    value="kg"
+                    checked={formData.unit_type === 'kg'}
+                    onChange={(e) => setFormData({ ...formData, unit_type: e.target.value })}
+                    className="w-4 h-4"
+                  />
+                  <span>KG (கிலோ)</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="unit_type"
+                    value="count"
+                    checked={formData.unit_type === 'count'}
+                    onChange={(e) => setFormData({ ...formData, unit_type: e.target.value })}
+                    className="w-4 h-4"
+                  />
+                  <span>Count (எண்ணிக்கை)</span>
+                </label>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">Quantity (அளவு) kg *</label>
+                <label className="label">
+                  {formData.unit_type === 'kg' ? 'Quantity (அளவு) kg *' : 'Count (எண்ணிக்கை) *'}
+                </label>
                 <input
                   type="number"
-                  value={formData.quantity_kg}
-                  onChange={(e) => setFormData({ ...formData, quantity_kg: e.target.value })}
+                  value={formData.unit_type === 'kg' ? formData.quantity_kg : formData.quantity_count}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    [formData.unit_type === 'kg' ? 'quantity_kg' : 'quantity_count']: e.target.value 
+                  })}
                   className="input"
-                  placeholder="Enter kg"
+                  placeholder={formData.unit_type === 'kg' ? 'Enter kg' : 'Enter count'}
                   min="0"
-                  step="0.1"
+                  step={formData.unit_type === 'kg' ? '0.1' : '1'}
                   required
                 />
               </div>
               <div>
-                <label className="label">Rate per kg (விலை/கிலோ) *</label>
+                <label className="label">
+                  {formData.unit_type === 'kg' ? 'Rate per kg (விலை/கிலோ) *' : 'Rate per unit (விலை/அலகு) *'}
+                </label>
                 <input
                   type="number"
-                  value={formData.rate_per_kg}
-                  onChange={(e) => setFormData({ ...formData, rate_per_kg: e.target.value })}
+                  value={formData.rate_per_unit}
+                  onChange={(e) => setFormData({ ...formData, rate_per_unit: e.target.value })}
                   className="input"
-                  placeholder="Rate per kg"
+                  placeholder={formData.unit_type === 'kg' ? 'Rate per kg' : 'Rate per unit'}
                   min="0"
                   step="0.1"
                   required
@@ -339,15 +386,26 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
               />
             </div>
 
-            <div>
-              <label className="label">Date (தேதி) *</label>
-              <input
-                type="date"
-                value={formData.income_date}
-                onChange={(e) => setFormData({ ...formData, income_date: e.target.value })}
-                className="input"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Date (தேதி) *</label>
+                <input
+                  type="date"
+                  value={formData.income_date}
+                  onChange={(e) => setFormData({ ...formData, income_date: e.target.value })}
+                  className="input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Time (நேரம்)</label>
+                <input
+                  type="time"
+                  value={formData.sale_time}
+                  onChange={(e) => setFormData({ ...formData, sale_time: e.target.value })}
+                  className="input"
+                />
+              </div>
             </div>
 
             <div>

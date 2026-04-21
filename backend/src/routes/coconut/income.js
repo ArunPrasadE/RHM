@@ -58,16 +58,23 @@ router.get('/:id', (req, res) => {
 // POST /api/coconut/income
 router.post('/', (req, res) => {
   try {
-    const { grove_id, year, category, quantity_kg, rate_per_kg, amount, income_date, notes } = req.body;
+    const { grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes } = req.body;
 
-    if (!grove_id || !year || !category || !quantity_kg || !rate_per_kg || !amount || !income_date) {
-      return res.status(400).json({ error: 'Grove, year, category, quantity, rate, amount, and date are required' });
+    if (!grove_id || !year || !category || !unit_type || !rate_per_unit || !amount || !income_date) {
+      return res.status(400).json({ error: 'Grove, year, category, unit type, rate, amount, and date are required' });
+    }
+
+    if (unit_type === 'kg' && !quantity_kg) {
+      return res.status(400).json({ error: 'Quantity in kg is required' });
+    }
+    if (unit_type === 'count' && !quantity_count) {
+      return res.status(400).json({ error: 'Quantity count is required' });
     }
 
     const result = db.prepare(`
-      INSERT INTO coconut_income (grove_id, year, category, quantity_kg, rate_per_kg, amount, income_date, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(grove_id, year, category, quantity_kg, rate_per_kg, amount, income_date, notes);
+      INSERT INTO coconut_income (grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(grove_id, year, category, unit_type, quantity_kg || null, quantity_count || null, rate_per_unit, amount, income_date, sale_time || null, notes || null);
 
     const newIncome = db.prepare('SELECT * FROM coconut_income WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(newIncome);
@@ -80,7 +87,7 @@ router.post('/', (req, res) => {
 // PUT /api/coconut/income/:id
 router.put('/:id', (req, res) => {
   try {
-    const { grove_id, year, category, quantity_kg, rate_per_kg, amount, income_date, notes } = req.body;
+    const { grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes } = req.body;
 
     const existing = db.prepare('SELECT * FROM coconut_income WHERE id = ?').get(req.params.id);
 
@@ -90,16 +97,19 @@ router.put('/:id', (req, res) => {
 
     db.prepare(`
       UPDATE coconut_income
-      SET grove_id = ?, year = ?, category = ?, quantity_kg = ?, rate_per_kg = ?, amount = ?, income_date = ?, notes = ?
+      SET grove_id = ?, year = ?, category = ?, unit_type = ?, quantity_kg = ?, quantity_count = ?, rate_per_unit = ?, amount = ?, income_date = ?, sale_time = ?, notes = ?
       WHERE id = ?
     `).run(
       grove_id || existing.grove_id,
       year || existing.year,
       category || existing.category,
-      quantity_kg || existing.quantity_kg,
-      rate_per_kg || existing.rate_per_kg,
+      unit_type || existing.unit_type,
+      quantity_kg ?? existing.quantity_kg,
+      quantity_count ?? existing.quantity_count,
+      rate_per_unit || existing.rate_per_unit,
       amount || existing.amount,
       income_date || existing.income_date,
+      sale_time ?? existing.sale_time,
       notes ?? existing.notes,
       req.params.id
     );
