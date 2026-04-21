@@ -234,6 +234,7 @@ router.get('/categories', (req, res) => {
   try {
     // Check if table exists, create if not
     const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='coconut_expense_categories'").get();
+    console.log('Table exists:', tableExists);
     if (!tableExists) {
       db.prepare(`CREATE TABLE IF NOT EXISTS coconut_expense_categories (
         id INTEGER PRIMARY KEY,
@@ -243,9 +244,11 @@ router.get('/categories', (req, res) => {
         is_active INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`).run();
+      console.log('Table created');
       return res.json([]);
     }
     const categories = db.prepare('SELECT * FROM coconut_expense_categories WHERE is_active = 1 ORDER BY label').all();
+    console.log('Categories found:', categories.length, categories);
     res.json(categories);
   } catch (error) {
     console.error('Error fetching expense categories:', error);
@@ -267,6 +270,7 @@ router.get('/categories/all', (req, res) => {
 router.post('/categories', (req, res) => {
   try {
     const { value, label, label_tamil } = req.body;
+    console.log('Adding category:', value, label, label_tamil);
 
     if (!value || !label) {
       return res.status(400).json({ error: 'Value and label are required' });
@@ -274,6 +278,7 @@ router.post('/categories', (req, res) => {
 
     // Check if table exists, create if not
     const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='coconut_expense_categories'").get();
+    console.log('Table exists:', tableExists);
     if (!tableExists) {
       db.prepare(`CREATE TABLE IF NOT EXISTS coconut_expense_categories (
         id INTEGER PRIMARY KEY,
@@ -283,19 +288,23 @@ router.post('/categories', (req, res) => {
         is_active INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`).run();
+      console.log('Table created');
     }
 
     // Check case-insensitively for existing - update if found
     const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
+    console.log('Existing:', existing);
     if (existing) {
       // Update existing record
       db.prepare('UPDATE coconut_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
       const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(existing.id);
+      console.log('Updated existing:', updated);
       return res.status(201).json(updated);
     }
 
     const result = db.prepare('INSERT INTO coconut_expense_categories (value, label, label_tamil) VALUES (?, ?, ?)').run(value, label, label_tamil || null);
     const newCategory = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(result.lastInsertRowid);
+    console.log('New category created:', newCategory);
     res.status(201).json(newCategory);
   } catch (error) {
     console.error('Error creating expense category:', error);
