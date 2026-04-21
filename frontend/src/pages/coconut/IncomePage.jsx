@@ -144,7 +144,7 @@ export default function IncomePage() {
                 <th className="text-left py-3 px-2">Date</th>
                 <th className="text-left py-3 px-2">Grove</th>
                 <th className="text-left py-3 px-2">Category</th>
-                <th className="text-right py-3 px-2">Qty (kg)</th>
+                <th className="text-right py-3 px-2">Qty (kg/nos)</th>
                 <th className="text-right py-3 px-2">Rate/kg</th>
                 <th className="text-right py-3 px-2">Amount</th>
                 <th className="text-right py-3 px-2">Actions</th>
