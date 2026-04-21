@@ -11,6 +11,17 @@ router.get('/', (req, res) => {
   try {
     const { grove_id, year, category } = req.query;
 
+    // Check if new columns exist (migration)
+    const tableInfo = db.prepare("PRAGMA table_info(coconut_income)").all();
+    const hasUnitType = tableInfo.some(c => c.name === 'unit_type');
+    if (!hasUnitType) {
+      // Alter table to add new columns
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
+    }
+
     let query = 'SELECT * FROM coconut_income WHERE 1=1';
     const params = [];
 
@@ -32,7 +43,14 @@ router.get('/', (req, res) => {
     query += ' ORDER BY income_date DESC';
 
     const incomes = db.prepare(query).all(...params);
-    res.json(incomes);
+    // Handle old data - convert to new format
+    const formattedIncomes = incomes.map(inc => ({
+      ...inc,
+      unit_type: inc.unit_type || 'kg',
+      rate_per_unit: inc.rate_per_unit || inc.rate_per_kg || 0,
+      quantity_count: inc.quantity_count || null
+    }));
+    res.json(formattedIncomes);
   } catch (error) {
     console.error('Error fetching income:', error);
     res.status(500).json({ error: 'Failed to fetch income' });
@@ -48,7 +66,11 @@ router.get('/:id', (req, res) => {
       return res.status(404).json({ error: 'Income record not found' });
     }
 
-    res.json(income);
+    res.json({
+      ...income,
+      unit_type: income.unit_type || 'kg',
+      rate_per_unit: income.rate_per_unit || income.rate_per_kg || 0
+    });
   } catch (error) {
     console.error('Error fetching income:', error);
     res.status(500).json({ error: 'Failed to fetch income' });
@@ -58,23 +80,26 @@ router.get('/:id', (req, res) => {
 // POST /api/coconut/income
 router.post('/', (req, res) => {
   try {
+    // Check if new columns exist, add if not (migration)
+    const tableInfo = db.prepare("PRAGMA table_info(coconut_income)").all();
+    const hasUnitType = tableInfo.some(c => c.name === 'unit_type');
+    if (!hasUnitType) {
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
+      db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
+    }
+
     const { grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes } = req.body;
 
-    if (!grove_id || !year || !category || !unit_type || !rate_per_unit || !amount || !income_date) {
-      return res.status(400).json({ error: 'Grove, year, category, unit type, rate, amount, and date are required' });
-    }
-
-    if (unit_type === 'kg' && !quantity_kg) {
-      return res.status(400).json({ error: 'Quantity in kg is required' });
-    }
-    if (unit_type === 'count' && !quantity_count) {
-      return res.status(400).json({ error: 'Quantity count is required' });
+    if (!grove_id || !year || !category || !rate_per_unit || !amount || !income_date) {
+      return res.status(400).json({ error: 'Grove, year, category, rate, amount, and date are required' });
     }
 
     const result = db.prepare(`
       INSERT INTO coconut_income (grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(grove_id, year, category, unit_type, quantity_kg || null, quantity_count || null, rate_per_unit, amount, income_date, sale_time || null, notes || null);
+    `).run(grove_id, year, category, unit_type || 'kg', quantity_kg || null, quantity_count || null, rate_per_unit, amount, income_date, sale_time || null, notes || null);
 
     const newIncome = db.prepare('SELECT * FROM coconut_income WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(newIncome);
@@ -95,6 +120,9 @@ router.put('/:id', (req, res) => {
       return res.status(404).json({ error: 'Income record not found' });
     }
 
+    // Handle old column names
+    const finalRatePerUnit = rate_per_unit || existing.rate_per_unit || existing.rate_per_kg;
+
     db.prepare(`
       UPDATE coconut_income
       SET grove_id = ?, year = ?, category = ?, unit_type = ?, quantity_kg = ?, quantity_count = ?, rate_per_unit = ?, amount = ?, income_date = ?, sale_time = ?, notes = ?
@@ -103,10 +131,10 @@ router.put('/:id', (req, res) => {
       grove_id || existing.grove_id,
       year || existing.year,
       category || existing.category,
-      unit_type || existing.unit_type,
+      unit_type || existing.unit_type || 'kg',
       quantity_kg ?? existing.quantity_kg,
       quantity_count ?? existing.quantity_count,
-      rate_per_unit || existing.rate_per_unit,
+      finalRatePerUnit,
       amount || existing.amount,
       income_date || existing.income_date,
       sale_time ?? existing.sale_time,
