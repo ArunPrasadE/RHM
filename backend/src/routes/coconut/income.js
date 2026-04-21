@@ -12,13 +12,25 @@ router.get('/', (req, res) => {
     // Migration - add new columns if they don't exist (ignore errors if already exist)
     const migrate = () => {
       try {
-        db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
-        db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
-        db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
-        db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
+        const tableInfo = db.prepare("PRAGMA table_info(coconut_income)").all();
+        const colNames = tableInfo.map(c => c.name);
+        console.log('Current columns:', colNames);
+        
+        if (!colNames.includes('unit_type')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
+        }
+        if (!colNames.includes('quantity_count')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
+        }
+        if (!colNames.includes('rate_per_unit')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
+        }
+        if (!colNames.includes('sale_time')) {
+          db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
+        }
         console.log('Migration completed');
       } catch (e) {
-        console.log('Migration already done or ignored:', e.message);
+        console.log('Migration error:', e.message);
       }
     };
     
