@@ -9,15 +9,10 @@ const EXPENSE_CATEGORIES = [
   { value: 'vidhai_nel', label: 'Vidhai Nel', labelTamil: 'விதை நெல்', hasSequence: false },
   { value: 'nadavu', label: 'Nadavu', labelTamil: 'நடவு', hasSequence: false },
   { value: 'kalai_kolli', label: 'Kalai Kolli', labelTamil: 'களை கொல்லி', hasSequence: false },
-  { value: 'uram', label: 'Uram', labelTamil: 'உரம்', hasSequence: true },
   { value: 'kalai_parippu', label: 'Kalai Parippu', labelTamil: 'களை பறிப்பு', hasSequence: false },
-  { value: 'vayal_velai', label: 'Vayal Velai', labelTamil: 'வயல் வேலை', hasSequence: true },
   { value: 'vayal_aruppu_machine', label: 'Vayal Aruppu Machine', labelTamil: 'வயல் அறுப்பு மெஷின்', hasSequence: false },
   { value: 'tractor', label: 'Tractor', labelTamil: 'டிராக்டர்', hasSequence: false },
   { value: 'patta_nel', label: 'Patta Nel', labelTamil: 'பாட்ட நெல்', hasSequence: false, isDirectExpense: true },
-  { value: 'vitthu_nel', label: 'Vitthu Nel', labelTamil: 'வித்து நெல்', hasSequence: false, isDirectExpense: true },
-  { value: 'vayal_paraval', label: 'Vayal Paraval', labelTamil: 'வயல் பரவல்', hasSequence: false, isDirectExpense: true },
-  { value: 'kalai_vilai', label: 'Kalai Vilai', labelTamil: 'களை விடை', hasSequence: false, isDirectExpense: true },
 ];
 
 export default function ExpensesPage() {

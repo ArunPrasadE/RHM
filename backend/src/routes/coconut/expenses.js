@@ -243,12 +243,23 @@ router.get('/categories', (req, res) => {
         is_active INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`).run();
+      return res.json([]);
     }
     const categories = db.prepare('SELECT * FROM coconut_expense_categories WHERE is_active = 1 ORDER BY label').all();
     res.json(categories);
   } catch (error) {
     console.error('Error fetching expense categories:', error);
     res.status(500).json({ error: 'Failed to fetch expense categories' });
+  }
+});
+
+// GET /api/coconut/expenses/categories/all - List ALL categories including inactive (for debugging)
+router.get('/categories/all', (req, res) => {
+  try {
+    const categories = db.prepare('SELECT * FROM coconut_expense_categories ORDER BY id DESC').all();
+    res.json(categories);
+  } catch (error) {
+    res.json([]);
   }
 });
 
@@ -274,15 +285,13 @@ router.post('/categories', (req, res) => {
       )`).run();
     }
 
-    // Check case-insensitively for existing
+    // Check case-insensitively for existing - update if found
     const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
     if (existing) {
-      if (existing.is_active === 0) {
-        db.prepare('UPDATE coconut_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
-        const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(existing.id);
-        return res.status(201).json(updated);
-      }
-      return res.status(400).json({ error: 'Category with this value already exists' });
+      // Update existing record
+      db.prepare('UPDATE coconut_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
+      const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(existing.id);
+      return res.status(201).json(updated);
     }
 
     const result = db.prepare('INSERT INTO coconut_expense_categories (value, label, label_tamil) VALUES (?, ?, ?)').run(value, label, label_tamil || null);
@@ -334,6 +343,16 @@ router.delete('/categories/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting expense category:', error);
     res.status(500).json({ error: 'Failed to delete expense category' });
+  }
+});
+
+// DELETE /api/coconut/expenses/categories - Hard delete ALL categories (cleanup)
+router.delete('/categories', (req, res) => {
+  try {
+    db.prepare('DELETE FROM coconut_expense_categories').run();
+    res.json({ message: 'All categories deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete categories' });
   }
 });
 

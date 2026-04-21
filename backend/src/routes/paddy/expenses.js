@@ -338,6 +338,19 @@ router.delete('/:id', (req, res) => {
 // GET /api/paddy/expenses/categories - List all custom expense categories
 router.get('/categories', (req, res) => {
   try {
+    // Check if table exists, create if not
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='paddy_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS paddy_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+      return res.json([]);
+    }
     const categories = db.prepare('SELECT * FROM paddy_expense_categories WHERE is_active = 1 ORDER BY label').all();
     res.json(categories);
   } catch (error) {
@@ -355,16 +368,25 @@ router.post('/categories', (req, res) => {
       return res.status(400).json({ error: 'Value and label are required' });
     }
 
-    // Check if category already exists
-    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE value = ?').get(value);
+    // Check if table exists, create if not
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='paddy_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS paddy_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+    }
+
+    // Check case-insensitively for existing - update if found
+    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
     if (existing) {
-      if (existing.is_active === 0) {
-        // Reactivate existing category
-        db.prepare('UPDATE paddy_expense_categories SET is_active = 1 WHERE id = ?').run(existing.id);
-        const updated = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(existing.id);
-        return res.status(201).json(updated);
-      }
-      return res.status(400).json({ error: 'Category with this value already exists' });
+      db.prepare('UPDATE paddy_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
+      const updated = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(existing.id);
+      return res.status(201).json(updated);
     }
 
     const result = db.prepare('INSERT INTO paddy_expense_categories (value, label, label_tamil) VALUES (?, ?, ?)').run(value, label, label_tamil || null);
