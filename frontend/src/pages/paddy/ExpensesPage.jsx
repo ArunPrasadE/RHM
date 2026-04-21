@@ -14,19 +14,30 @@ const EXPENSE_CATEGORIES = [
   { value: 'vayal_velai', label: 'Vayal Velai', labelTamil: 'வயல் வேலை', hasSequence: true },
   { value: 'vayal_aruppu_machine', label: 'Vayal Aruppu Machine', labelTamil: 'வயல் அறுப்பு மெஷின்', hasSequence: false },
   { value: 'tractor', label: 'Tractor', labelTamil: 'டிராக்டர்', hasSequence: false },
-  { value: 'patta_nel', label: 'Patta Nel', labelTamil: 'பாட்ட நெல்', hasSequence: false, needsField: true },
+  { value: 'patta_nel', label: 'Patta Nel', labelTamil: 'பாட்ட நெல்', hasSequence: false, isDirectExpense: true },
+  { value: 'vitthu_nel', label: 'Vitthu Nel', labelTamil: 'வித்து நெல்', hasSequence: false, isDirectExpense: true },
+  { value: 'vayal_paraval', label: 'Vayal Paraval', labelTamil: 'வயல் பரவல்', hasSequence: false, isDirectExpense: true },
+  { value: 'kalai_vilai', label: 'Kalai Vilai', labelTamil: 'களை விடை', hasSequence: false, isDirectExpense: true },
 ];
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [fields, setFields] = useState([]);
   const [workers, setWorkers] = useState([]);
+  const [customCategories, setCustomCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterCrop, setFilterCrop] = useState(1);
   const [filterField, setFilterField] = useState('all');
+
+  const allCategories = [...EXPENSE_CATEGORIES, ...customCategories.map(c => ({
+    value: c.value,
+    label: c.label,
+    labelTamil: c.label_tamil || ''
+  }))];
 
   useEffect(() => {
     fetchData();
@@ -34,14 +45,16 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      const [expensesData, fieldsData, workersData] = await Promise.all([
+      const [expensesData, fieldsData, workersData, categoriesData] = await Promise.all([
         api.get(`/paddy/expenses?year=${filterYear}&crop_number=${filterCrop}${filterField !== 'all' ? `&field_id=${filterField}` : ''}`),
         api.get('/paddy/fields'),
-        api.get('/paddy/workers')
+        api.get('/paddy/workers'),
+        api.get('/paddy/expenses/categories')
       ]);
       setExpenses(expensesData);
       setFields(fieldsData);
       setWorkers(workersData);
+      setCustomCategories(categoriesData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -50,8 +63,8 @@ export default function ExpensesPage() {
   };
 
   const getCategoryLabel = (category) => {
-    const cat = EXPENSE_CATEGORIES.find(c => c.value === category);
-    return cat ? `${cat.label} (${cat.labelTamil})` : category;
+    const cat = allCategories.find(c => c.value === category);
+    return cat ? `${cat.label} (${cat.labelTamil || ''})` : category;
   };
 
   const getFieldName = (fieldId) => {
@@ -148,12 +161,20 @@ export default function ExpensesPage() {
             (செலவுகள்)
           </span>
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn btn-primary"
-        >
-          + Add Expense
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCategoryForm(true)}
+            className="btn btn-secondary"
+          >
+            Categories
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn btn-primary"
+          >
+            + Add Expense
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -315,7 +336,7 @@ export default function ExpensesPage() {
           expense={editingExpense}
           fields={fields}
           workers={workers}
-          categories={EXPENSE_CATEGORIES}
+          categories={allCategories}
           defaultYear={filterYear}
           defaultCrop={filterCrop}
           existingExpenses={expenses}
@@ -340,6 +361,35 @@ export default function ExpensesPage() {
             }
           }}
           onClose={() => { setShowForm(false); setEditingExpense(null); }}
+        />
+      )}
+
+      {showCategoryForm && (
+        <CategoryManagerModal
+          categories={customCategories}
+          onSave={async (data) => {
+            try {
+              if (data.id) {
+                await api.put(`/paddy/expenses/categories/${data.id}`, data);
+              } else {
+                await api.post('/paddy/expenses/categories', data);
+              }
+              fetchData();
+            } catch (error) {
+              console.error('Failed to save category:', error);
+              alert(`Failed to save category: ${error.message || error}`);
+            }
+          }}
+          onDelete={async (id) => {
+            try {
+              await api.delete(`/paddy/expenses/categories/${id}`);
+              fetchData();
+            } catch (error) {
+              console.error('Failed to delete category:', error);
+              alert(`Failed to delete category: ${error.message || error}`);
+            }
+          }}
+          onClose={() => setShowCategoryForm(false)}
         />
       )}
     </div>
@@ -412,6 +462,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
     e.preventDefault();
     setLoading(true);
     try {
+      const isDirectExpense = selectedCategory?.isDirectExpense;
+
       if (isGrouped) {
         // When editing grouped, update all related expenses with new total
         await onSave({
@@ -447,6 +499,17 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
         
         console.log('Updating expense with data:', payload); // Debug log
         await onSave(payload);
+      } else if (isDirectExpense) {
+        // Direct expense to selected field (no split) - e.g., patta_nel
+        await onSave({
+          field_id: parseInt(formData.field_id),
+          year: parseInt(formData.year),
+          crop_number: parseInt(formData.crop_number),
+          category: formData.category,
+          amount: parseFloat(formData.amount),
+          expense_date: formData.expense_date,
+          notes: formData.notes || ''
+        });
       } else {
         // When adding new, split across fields
         await onSave({
@@ -477,8 +540,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Show field dropdown only when editing single expense (not grouped) */}
-            {isEditing && !isGrouped && (
+            {/* Show field dropdown for direct expenses (patta_nel) or when editing single expense */}
+            {(selectedCategory?.isDirectExpense || (isEditing && !isGrouped)) && (
               <div>
                 <label className="label">Field (வயல்) *</label>
                 <select
@@ -563,34 +626,37 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               </div>
             )}
 
-            <div>
-              <label className="label">Pay To (யாருக்கு கொடுக்க வேண்டும்)</label>
-              <select
-                value={formData.worker_id}
-                onChange={(e) => setFormData({ ...formData, worker_id: e.target.value })}
-                className="input"
-              >
-                <option value="">Select worker (optional)</option>
-                {workers.map(w => (
-                  <option key={w.id} value={w.id}>{w.name} - {w.category}</option>
-                ))}
-              </select>
-            </div>
+            {/* Hide worker dropdown for direct expenses like patta_nel */}
+            {!selectedCategory?.isDirectExpense && (
+              <div>
+                <label className="label">Pay To (யாருக்கு கொடுக்க வேண்டும்)</label>
+                <select
+                  value={formData.worker_id}
+                  onChange={(e) => setFormData({ ...formData, worker_id: e.target.value })}
+                  className="input"
+                >
+                  <option value="">Select worker (optional)</option>
+                  {workers.map(w => (
+                    <option key={w.id} value={w.id}>{w.name} - {w.category}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 items-end">
               <div>
                 <label className="label whitespace-nowrap">
-                  {isEditing && !isGrouped ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
+                  {selectedCategory?.isDirectExpense || (isEditing && !isGrouped) ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
                 </label>
                 <input
                   type="number"
-                  value={isEditing && !isGrouped ? formData.amount : formData.total_amount}
+                  value={selectedCategory?.isDirectExpense || (isEditing && !isGrouped) ? formData.amount : formData.total_amount}
                   onChange={(e) => setFormData({
                     ...formData,
-                    [isEditing && !isGrouped ? 'amount' : 'total_amount']: e.target.value
+                    [selectedCategory?.isDirectExpense || (isEditing && !isGrouped) ? 'amount' : 'total_amount']: e.target.value
                   })}
                   className="input"
-                  placeholder={isEditing && !isGrouped ? 'Enter amount' : 'Enter total'}
+                  placeholder={selectedCategory?.isDirectExpense || (isEditing && !isGrouped) ? 'Enter amount' : 'Enter total'}
                   min="0"
                   step="1"
                   required
@@ -608,8 +674,8 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               </div>
             </div>
 
-            {/* Split Preview - for new expenses and grouped edits */}
-            {(!isEditing || isGrouped) && formData.total_amount && fields.length > 0 && (
+            {/* Split Preview - for new expenses and grouped edits, hide for direct expenses */}
+            {(!selectedCategory?.isDirectExpense) && (!isEditing || isGrouped) && formData.total_amount && fields.length > 0 && (
               <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
                 <p className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">
                   {isGrouped ? 'New Split Preview (புதிய பிரிவு முன்னோட்டம்):' : 'Split Preview (பிரிவு முன்னோட்டம்):'}
@@ -648,6 +714,124 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryManagerModal({ categories, onSave, onDelete, onClose }) {
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [formData, setFormData] = useState({
+    value: '',
+    label: '',
+    label_tamil: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave(editingCategory ? { ...formData, id: editingCategory.id } : formData);
+      setEditingCategory(null);
+      setFormData({ value: '', label: '', label_tamil: '' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (category) => {
+    setEditingCategory(category);
+    setFormData({
+      value: category.value,
+      label: category.label,
+      label_tamil: category.label_tamil || ''
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold">Manage Categories (வகைகள்)</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+            <div>
+              <label className="label">Value (API key) *</label>
+              <input
+                type="text"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                className="input"
+                placeholder="e.g., my_category"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Label (English) *</label>
+              <input
+                type="text"
+                value={formData.label}
+                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                className="input"
+                placeholder="e.g., My Category"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Label (Tamil)</label>
+              <input
+                type="text"
+                value={formData.label_tamil}
+                onChange={(e) => setFormData({ ...formData, label_tamil: e.target.value })}
+                className="input"
+                placeholder="e.g., என் வகை"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setEditingCategory(null); setFormData({ value: '', label: '', label_tamil: '' }); }} className="flex-1 btn btn-secondary">
+                Clear
+              </button>
+              <button type="submit" disabled={loading} className="flex-1 btn btn-primary">
+                {loading ? 'Saving...' : editingCategory ? 'Update' : 'Add'}
+              </button>
+            </div>
+          </form>
+
+          <div className="border-t dark:border-gray-700 pt-4">
+            <h3 className="font-medium mb-2">Existing Categories:</h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {categories.length === 0 ? (
+                <p className="text-gray-500 text-sm">No custom categories yet</p>
+              ) : (
+                categories.map(cat => (
+                  <div key={cat.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                    <span>{cat.label} ({cat.label_tamil || cat.value})</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEdit(cat)} className="text-blue-600 hover:text-blue-800 text-sm">
+                        Edit
+                      </button>
+                      <button onClick={() => onDelete(cat.id)} className="text-red-600 hover:text-red-800 text-sm">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <button onClick={onClose} className="w-full btn btn-secondary mt-4">
+            Close
+          </button>
         </div>
       </div>
     </div>
