@@ -336,6 +336,7 @@ export default function ExpensesPage() {
       {showCategoryForm && (
         <CategoryManagerModal
           categories={customCategories}
+          onRefresh={fetchData}
           onSave={async (data) => {
             try {
               if (data.id) {
@@ -604,7 +605,7 @@ function DeleteIcon({ className }) {
   );
 }
 
-function CategoryManagerModal({ categories, onSave, onDelete, onClose }) {
+function CategoryManagerModal({ categories, onRefresh, onSave, onDelete, onClose }) {
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({
     value: '',
@@ -691,7 +692,12 @@ function CategoryManagerModal({ categories, onSave, onDelete, onClose }) {
           </form>
 
           <div className="border-t dark:border-gray-700 pt-4">
-            <h3 className="font-medium mb-2">Existing Categories:</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium">Existing Categories:</h3>
+              <button onClick={onRefresh} className="text-blue-600 text-sm hover:underline">
+                Refresh
+              </button>
+            </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {categories.length === 0 ? (
                 <p className="text-gray-500 text-sm">No custom categories yet</p>
