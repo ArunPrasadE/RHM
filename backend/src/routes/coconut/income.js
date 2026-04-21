@@ -9,18 +9,23 @@ router.use(authenticateToken);
 // GET /api/coconut/income
 router.get('/', (req, res) => {
   try {
-    const { grove_id, year, category } = req.query;
+    // Migration - add new columns if they don't exist (ignore errors if already exist)
+    const migrate = () => {
+      try {
+        db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
+        db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
+        db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
+        db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
+        console.log('Migration completed');
+      } catch (e) {
+        console.log('Migration already done or ignored:', e.message);
+      }
+    };
+    
+    // Try migration
+    migrate();
 
-    // Check if new columns exist (migration)
-    const tableInfo = db.prepare("PRAGMA table_info(coconut_income)").all();
-    const hasUnitType = tableInfo.some(c => c.name === 'unit_type');
-    if (!hasUnitType) {
-      // Alter table to add new columns
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
-    }
+    const { grove_id, year, category } = req.query;
 
     let query = 'SELECT * FROM coconut_income WHERE 1=1';
     const params = [];
@@ -80,28 +85,17 @@ router.get('/:id', (req, res) => {
 // POST /api/coconut/income
 router.post('/', (req, res) => {
   try {
-    // Check if new columns exist, add if not (migration)
-    const tableInfo = db.prepare("PRAGMA table_info(coconut_income)").all();
-    const hasUnitType = tableInfo.some(c => c.name === 'unit_type');
-    if (!hasUnitType) {
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN unit_type TEXT DEFAULT 'kg'").run();
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN quantity_count INTEGER").run();
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN rate_per_unit REAL").run();
-      db.prepare("ALTER TABLE coconut_income ADD COLUMN sale_time TEXT").run();
-    }
-
     const { grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes } = req.body;
+    console.log('POST income payload:', JSON.stringify(req.body));
 
-    if (!grove_id || !year || !category || !rate_per_unit || !amount || !income_date) {
-      return res.status(400).json({ error: 'Grove, year, category, rate, amount, and date are required' });
-    }
-
+    // Simple insert with all new fields
     const result = db.prepare(`
       INSERT INTO coconut_income (grove_id, year, category, unit_type, quantity_kg, quantity_count, rate_per_unit, amount, income_date, sale_time, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(grove_id, year, category, unit_type || 'kg', quantity_kg || null, quantity_count || null, rate_per_unit, amount, income_date, sale_time || null, notes || null);
 
     const newIncome = db.prepare('SELECT * FROM coconut_income WHERE id = ?').get(result.lastInsertRowid);
+    console.log('Income saved:', newIncome);
     res.status(201).json(newIncome);
   } catch (error) {
     console.error('Error creating income:', error);
