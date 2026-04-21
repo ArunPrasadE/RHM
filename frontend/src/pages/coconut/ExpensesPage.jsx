@@ -10,10 +10,6 @@ const EXPENSE_CATEGORIES = [
   { value: 'veli_paramarithal', label: 'Veli Paramarithal', labelTamil: 'வேலி பராமரித்தல்' },
   { value: 'puthiya_thennai_naduthal', label: 'Puthiya Thennai Naduthal', labelTamil: 'புதிய தென்னை நடுதல்' },
   { value: 'pazhaya_maram_vetuthal', label: 'Pazhaya Maram Vetuthal', labelTamil: 'பழைய மரம் வெட்டுதல்' },
-  { value: 'uram', label: 'Uram', labelTamil: 'உரம்' },
-  { value: 'vayal_velai', label: 'Vayal Velai', labelTamil: 'வயல் வேலை' },
-  { value: 'thenagi_vettu', label: 'Thenagi Vettu', labelTamil: 'தேநகி வெட்டு' },
-  { value: 'paraval', label: 'Paraval', labelTamil: 'பரவல்' },
 ];
 
 export default function ExpensesPage() {
