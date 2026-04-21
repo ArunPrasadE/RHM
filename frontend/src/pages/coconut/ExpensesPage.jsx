@@ -39,6 +39,7 @@ export default function ExpensesPage() {
       console.log('Fetching categories...');
       const categoriesRes = await api.get(`/coconut/expenses/categories?t=${Date.now()}`);
       console.log('Categories fetched:', categoriesRes);
+      alert('Categories: ' + JSON.stringify(categoriesRes));
       
       if (categoriesRes && categoriesRes.length > 0) {
         console.log('Categories found:', categoriesRes.length);
