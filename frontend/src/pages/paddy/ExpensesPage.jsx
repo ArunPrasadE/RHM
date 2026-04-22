@@ -96,6 +96,7 @@ export default function ExpensesPage() {
   };
 
   const handleEdit = (expense) => {
+    console.log('Editing expense:', expense);
     setEditingExpense(expense);
     setShowForm(true);
   };
@@ -432,6 +433,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
   const [loading, setLoading] = useState(false);
 
   const selectedCategory = categories.find(c => c.value === formData.category);
+  console.log('ExpenseForm debug:', { isEditing, isGrouped, selectedCategory: selectedCategory?.value, field_id: formData.field_id, amount: formData.amount });
 
   // Auto-select next sequence number when category changes
   const getNextSequenceNumber = (category) => {
