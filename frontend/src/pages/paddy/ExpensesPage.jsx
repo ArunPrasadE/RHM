@@ -96,6 +96,7 @@ export default function ExpensesPage() {
   };
 
   const handleEdit = (expense) => {
+    console.log('handleEdit - expense from list:', expense);
     setEditingExpense(expense);
     setShowForm(true);
   };
