@@ -287,6 +287,7 @@ export default function ExpensesPage() {
               <tr className="border-b dark:border-gray-700">
                 <th className="text-left py-3 px-2">Date</th>
                 <th className="text-left py-3 px-2">Category</th>
+                <th className="text-left py-3 px-2">Worker</th>
                 <th className="text-right py-3 px-2">Amount</th>
                 <th className="text-right py-3 px-2">Actions</th>
               </tr>
@@ -300,6 +301,9 @@ export default function ExpensesPage() {
                     {expense.sequence_number && (
                       <span className="ml-1 text-sm text-gray-500">#{expense.sequence_number}</span>
                     )}
+                  </td>
+                  <td className="py-3 px-2">
+                    {expense.worker_name || '-'}
                   </td>
                   <td className="py-3 px-2 text-right font-medium">
                     {formatCurrency(expense.amount)}

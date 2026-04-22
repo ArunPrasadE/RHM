@@ -37,7 +37,22 @@ router.get('/', (req, res) => {
     query += ' ORDER BY expense_date DESC';
 
     const expenses = db.prepare(query).all(...params);
-    res.json(expenses);
+    
+    // Add worker and field names
+    const workers = db.prepare('SELECT id, name FROM paddy_workers WHERE is_active = 1').all();
+    const fields = db.prepare('SELECT id, name FROM paddy_fields WHERE is_active = 1').all();
+    const workerMap = {};
+    const fieldMap = {};
+    workers.forEach(w => workerMap[w.id] = w.name);
+    fields.forEach(f => fieldMap[f.id] = f.name);
+    
+    const result = expenses.map(e => ({
+      ...e,
+      worker_name: e.worker_id ? workerMap[e.worker_id] : null,
+      field_name: fieldMap[e.field_id] || null
+    }));
+    
+    res.json(result);
   } catch (error) {
     console.error('Error fetching expenses:', error);
     res.status(500).json({ error: 'Failed to fetch expenses' });
