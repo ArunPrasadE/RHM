@@ -432,7 +432,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
     crop_number: expense?.crop_number || defaultCrop,
     category: expense?.category || '',
     sequence_number: expense?.sequence_number || '',
-    worker_id: expense?.worker_id || '',
+    worker_id: expense?.worker_id ? String(expense.worker_id) : '',
     amount: expense?.amount || '',
     total_amount: isGrouped ? expense?.total_amount || '' : '',
     expense_date: expense?.expense_date || new Date().toISOString().split('T')[0],
@@ -441,6 +441,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
   const [loading, setLoading] = useState(false);
 
   const selectedCategory = categories.find(c => c.value === formData.category);
+  console.log('ExpenseForm debug:', { worker_id: expense?.worker_id, formData_worker_id: formData.worker_id, workers_count: workers.length });
 
   // Auto-select next sequence number when category changes
   const getNextSequenceNumber = (category) => {
