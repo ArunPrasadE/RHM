@@ -96,18 +96,18 @@ export default function ExpensesPage() {
   };
 
   const handleEdit = (expense) => {
-    console.log('handleEdit - expense from list:', expense);
+    console.log('handleEdit - expense:', expense);
     setEditingExpense(expense);
     setShowForm(true);
   };
 
   const handleEditGrouped = (group) => {
+    console.log('handleEditGrouped - group:', group);
     setEditingExpense({
       ...group,
       isGrouped: true,
       year: filterYear,
       crop_number: filterCrop,
-      // Store original values for finding the group
       original_category: group.category,
       original_sequence_number: group.sequence_number,
       original_expense_date: group.expense_date,
@@ -442,7 +442,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
   const [loading, setLoading] = useState(false);
 
   const selectedCategory = categories.find(c => c.value === formData.category);
-  console.log('ExpenseForm debug:', { worker_id: expense?.worker_id, formData_worker_id: formData.worker_id, workers_count: workers.length });
+  console.log('ExpenseForm received:', { worker_id: expense?.worker_id, amount: expense?.amount, expense_worker_id_type: typeof expense?.worker_id });
 
   // Auto-select next sequence number when category changes
   const getNextSequenceNumber = (category) => {
