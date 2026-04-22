@@ -96,7 +96,6 @@ export default function ExpensesPage() {
   };
 
   const handleEdit = (expense) => {
-    console.log('Editing expense:', expense);
     setEditingExpense(expense);
     setShowForm(true);
   };
@@ -262,7 +261,16 @@ export default function ExpensesPage() {
                   <td className="py-3 px-2 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => handleEditGrouped(group)}
+                        onClick={() => {
+                          const cat = allCategories.find(c => c.value === group.category);
+                          const isDirect = cat?.isDirectExpense;
+                          if (isDirect && group.expense_ids?.length === 1) {
+                            const exp = expenses.find(e => e.id === group.expense_ids[0]);
+                            if (exp) handleEdit(exp);
+                          } else {
+                            handleEditGrouped(group);
+                          }
+                        }}
                         className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
                       >
                         <EditIcon className="w-4 h-4" />
@@ -433,7 +441,6 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
   const [loading, setLoading] = useState(false);
 
   const selectedCategory = categories.find(c => c.value === formData.category);
-  console.log('ExpenseForm debug:', { isEditing, isGrouped, selectedCategory: selectedCategory?.value, field_id: formData.field_id, amount: formData.amount });
 
   // Auto-select next sequence number when category changes
   const getNextSequenceNumber = (category) => {
