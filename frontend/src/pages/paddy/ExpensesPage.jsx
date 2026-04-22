@@ -101,15 +101,10 @@ export default function ExpensesPage() {
   };
 
   const handleEditGrouped = (group) => {
-    console.log('handleEditGrouped - group.expense_ids:', group.expense_ids);
-    console.log('handleEditGrouped - expenses array:', expenses.map(e => ({id: e.id, worker_id: e.worker_id})));
-    
     // For grouped edit, get the first individual expense to access worker_id
     const firstExpense = group.expense_ids?.length > 0 
       ? expenses.find(e => e.id === group.expense_ids[0]) 
       : null;
-    
-    console.log('handleEditGrouped - firstExpense:', firstExpense);
     
     setEditingExpense({
       ...group,
@@ -455,7 +450,6 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
   const [loading, setLoading] = useState(false);
 
   const selectedCategory = categories.find(c => c.value === formData.category);
-  console.log('ExpenseForm - isGrouped:', isGrouped, 'expense:', expense);
 
   // Auto-select next sequence number when category changes
   const getNextSequenceNumber = (category) => {
