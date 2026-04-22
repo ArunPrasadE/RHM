@@ -442,7 +442,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
   const [loading, setLoading] = useState(false);
 
   const selectedCategory = categories.find(c => c.value === formData.category);
-  console.log('ExpenseForm received:', { worker_id: expense?.worker_id, amount: expense?.amount, expense_worker_id_type: typeof expense?.worker_id });
+  console.log('ExpenseForm received - full object:', expense);
 
   // Auto-select next sequence number when category changes
   const getNextSequenceNumber = (category) => {
