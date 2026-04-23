@@ -4,6 +4,7 @@ import api, { formatCurrency } from '../../utils/api';
 const INCOME_CATEGORIES = [
   { value: 'thengai', label: 'Thengai', labelTamil: 'தேங்காய்' },
   { value: 'mangai', label: 'Mangai', labelTamil: 'மாங்காய்' },
+  { value: 'chakka', label: 'Chakka', labelTamil: 'சக்கா' },
 ];
 
 export default function IncomePage() {
