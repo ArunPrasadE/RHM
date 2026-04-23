@@ -67,11 +67,15 @@ router.get('/summary/:grove_id/:year', (req, res) => {
     res.json({
       grove,
       year: parseInt(year),
-      totalExpenses,
-      totalIncome,
+      expenses: {
+        total: totalExpenses,
+        byCategory: expensesByCategory
+      },
+      income: {
+        total: totalIncome,
+        byCategory: incomeByCategory
+      },
       profit,
-      expensesByCategory,
-      incomeByCategory,
       yieldSummary
     });
   } catch (error) {
