@@ -378,12 +378,11 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
   // Calculate total area for split preview
   const totalAreaCents = groves.reduce((sum, g) => sum + g.area_cents, 0);
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (isGrouped) {
-        // When editing grouped, update all related expenses with new total
         await onSave({
           category: formData.category,
           expense_date: formData.expense_date,
@@ -393,10 +392,8 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
           notes: formData.notes
         });
       } else if (isEditing) {
-        // When editing single expense
         await onSave({
           grove_id: parseInt(formData.grove_id),
-          year: formData.year,
           category: formData.category,
           worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
           amount: parseFloat(formData.amount),
@@ -404,12 +401,27 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
           notes: formData.notes
         });
       } else {
-        // When adding new, split across groves
-        await onSave({
-          ...formData,
-          total_amount: parseFloat(formData.total_amount),
-          worker_id: formData.worker_id ? parseInt(formData.worker_id) : null
-        });
+        // New expense - check if specific grove selected or all
+        const selectedGroveId = parseInt(formData.grove_id);
+        if (selectedGroveId) {
+          // Specific grove - no split
+          await onSave({
+            grove_id: selectedGroveId,
+            year: formData.year,
+            category: formData.category,
+            amount: parseFloat(formData.amount),
+            expense_date: formData.expense_date,
+            worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
+            notes: formData.notes
+          });
+        } else {
+          // All groves - split
+          await onSave({
+            ...formData,
+            total_amount: parseFloat(formData.total_amount),
+            worker_id: formData.worker_id ? parseInt(formData.worker_id) : null
+          });
+        }
       }
     } finally {
       setLoading(false);
@@ -432,7 +444,25 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Show grove dropdown only when editing single expense (not grouped) */}
+            {/* Show grove dropdown for new expenses or editing */}
+            {(!isEditing || isGrouped) && (
+              <div>
+                <label className="label">Grove (தோப்பு) *</label>
+                <select
+                  value={formData.grove_id}
+                  onChange={(e) => setFormData({ ...formData, grove_id: e.target.value })}
+                  className="input"
+                  required
+                >
+                  <option value="">All Groves (எல்லா தோப்புகள்)</option>
+                  {groves.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Show grove dropdown when editing single expense */}
             {isEditing && !isGrouped && (
               <div>
                 <label className="label">Grove (தோப்பு) *</label>
@@ -508,17 +538,17 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
             <div className="grid grid-cols-2 gap-4 items-end">
               <div>
                 <label className="label whitespace-nowrap">
-                  {isEditing && !isGrouped ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
+                  {(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
                 </label>
                 <input
                   type="number"
-                  value={isEditing && !isGrouped ? formData.amount : formData.total_amount}
+                  value={(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? formData.amount : formData.total_amount}
                   onChange={(e) => setFormData({
                     ...formData,
-                    [isEditing && !isGrouped ? 'amount' : 'total_amount']: e.target.value
+                    [(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? 'amount' : 'total_amount']: e.target.value
                   })}
                   className="input"
-                  placeholder={isEditing && !isGrouped ? 'Enter amount' : 'Enter total'}
+                  placeholder={(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? 'Enter amount' : 'Enter total'}
                   min="0"
                   step="1"
                   required
@@ -537,8 +567,8 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
               </div>
             </div>
 
-            {/* Split Preview - for new expenses and grouped edits */}
-            {(!isEditing || isGrouped) && formData.total_amount && groves.length > 0 && (
+            {/* Split Preview - for new expenses when ALL GROVES selected and grouped edits */}
+            {((!isEditing && !formData.grove_id) || isGrouped) && formData.total_amount && groves.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">
                   {isGrouped ? 'New Split Preview (புதிய பிரிவு முன்னோட்டம்):' : 'Split Preview (பிரிவு முன்னோட்டம்):'}

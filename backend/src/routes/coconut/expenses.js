@@ -187,11 +187,34 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/coconut/expenses - Split total amount across all groves by area
+// POST /api/coconut/expenses - Add expense for single grove or split across all
 router.post('/', (req, res) => {
   try {
-    const { year, category, total_amount, expense_date, worker_id, notes } = req.body;
+    const { grove_id, year, category, total_amount, amount, expense_date, worker_id, notes } = req.body;
 
+    // If specific grove_id is provided, add expense for that grove only (no split)
+    if (grove_id && amount && !total_amount) {
+      if (!year || !category || !amount || !expense_date) {
+        return res.status(400).json({ error: 'Year, category, amount, and date are required' });
+      }
+      
+      const result = db.prepare(`
+        INSERT INTO coconut_expenses (grove_id, year, category, amount, expense_date, worker_id, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(grove_id, year, category, amount, expense_date, worker_id || null, notes || null);
+
+      const newExpense = db.prepare('SELECT * FROM coconut_expenses WHERE id = ?').get(result.lastInsertRowid);
+      const grove = db.prepare('SELECT name FROM coconut_groves WHERE id = ?').get(grove_id);
+      
+      res.status(201).json({
+        message: `Expense added for ${grove?.name || 'grove'}`,
+        amount: amount,
+        expenses: [{ ...newExpense, grove_name: grove?.name }]
+      });
+      return;
+    }
+
+    // Default: Split across all groves
     if (!year || !category || !total_amount || !expense_date) {
       return res.status(400).json({ error: 'Year, category, total amount, and date are required' });
     }
