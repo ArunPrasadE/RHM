@@ -137,6 +137,26 @@ export default function IncomePage() {
         </div>
       </div>
 
+      {/* Category Summary */}
+      {incomes.length > 0 && (
+        <div className="card">
+          <h3 className="font-medium mb-3">Summary by Category (வகை வாரியாக)</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {Object.entries(
+              incomes.reduce((acc, inc) => {
+                acc[inc.category] = (acc[inc.category] || 0) + inc.amount;
+                return acc;
+              }, {})
+            ).map(([cat, total]) => (
+              <div key={cat} className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                <p className="text-sm text-gray-500">{getCategoryLabel(cat)}</p>
+                <p className="font-bold text-green-600 dark:text-green-400">{formatCurrency(total)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Income List */}
       {incomes.length === 0 ? (
         <div className="card text-center py-12">

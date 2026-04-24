@@ -158,9 +158,9 @@ export default function GroveDetailPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <h3 className="font-medium mb-2">Income by Category</h3>
-                {yearSummary.incomeByCategory?.length > 0 ? (
+                {yearSummary.income?.byCategory?.length > 0 ? (
                   <div className="space-y-1">
-                    {yearSummary.incomeByCategory.map((item) => (
+                    {yearSummary.income.byCategory.map((item) => (
                       <div key={item.category} className="flex justify-between text-sm">
                         <span>{item.category}</span>
                         <span className="font-medium">{formatCurrency(item.total)}</span>
@@ -173,9 +173,9 @@ export default function GroveDetailPage() {
               </div>
               <div>
                 <h3 className="font-medium mb-2">Expenses by Category</h3>
-                {yearSummary.expensesByCategory?.length > 0 ? (
+                {yearSummary.expenses?.byCategory?.length > 0 ? (
                   <div className="space-y-1">
-                    {yearSummary.expensesByCategory.map((item) => (
+                    {yearSummary.expenses.byCategory.map((item) => (
                       <div key={item.category} className="flex justify-between text-sm">
                         <span>{item.category}</span>
                         <span className="font-medium">{formatCurrency(item.total)}</span>
