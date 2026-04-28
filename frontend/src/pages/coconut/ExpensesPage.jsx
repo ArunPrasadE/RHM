@@ -49,7 +49,6 @@ export default function ExpensesPage() {
       setWorkers(workersData);
       setCustomCategories(categoriesRes || []);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -111,7 +110,6 @@ export default function ExpensesPage() {
       await api.delete(`/coconut/expenses/${expense.id}`);
       fetchData();
     } catch (error) {
-      console.error('Failed to delete expense:', error);
       alert('Failed to delete expense');
     }
   };
@@ -124,7 +122,6 @@ export default function ExpensesPage() {
       }
       fetchData();
     } catch (error) {
-      console.error('Failed to delete grouped expense:', error);
       alert('Failed to delete expense');
     }
   };
@@ -300,7 +297,6 @@ export default function ExpensesPage() {
               setEditingExpense(null);
               fetchData();
             } catch (error) {
-              console.error('Failed to save expense:', error);
               alert('Failed to save expense');
             }
           }}
@@ -322,7 +318,6 @@ export default function ExpensesPage() {
               }
               await fetchData();
             } catch (error) {
-              console.error('Failed to save category:', error);
               alert(`Failed to save category: ${error.message || error}`);
             }
           }}
@@ -331,7 +326,6 @@ export default function ExpensesPage() {
               await api.delete(`/coconut/expenses/categories/${id}`);
               await fetchData();
             } catch (error) {
-              console.error('Failed to delete category:', error);
               alert(`Failed to delete category: ${error.message || error}`);
             }
           }}

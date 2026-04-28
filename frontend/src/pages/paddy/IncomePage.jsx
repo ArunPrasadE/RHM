@@ -29,7 +29,6 @@ export default function IncomePage() {
       setIncomes(incomeData);
       setFields(fieldsData);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -58,7 +57,6 @@ export default function IncomePage() {
       await api.delete(`/paddy/income/${income.id}`);
       fetchData();
     } catch (error) {
-      console.error('Failed to delete income:', error);
       alert('Failed to delete income');
     }
   };
@@ -168,6 +166,10 @@ export default function IncomePage() {
             Add First Income
           </button>
         </div>
+      ) : filterField === 'all' ? (
+        <div className="card text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">Select a specific field to see details</p>
+        </div>
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
@@ -242,7 +244,6 @@ export default function IncomePage() {
               setEditingIncome(null);
               fetchData();
             } catch (error) {
-              console.error('Failed to save income:', error);
               alert('Failed to save income');
             }
           }}

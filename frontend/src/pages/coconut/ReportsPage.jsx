@@ -21,7 +21,6 @@ export default function ReportsPage() {
         setSelectedGrove(data[0].id.toString());
       }
     } catch (error) {
-      console.error('Failed to fetch groves:', error);
     } finally {
       setLoading(false);
     }
@@ -35,7 +34,6 @@ export default function ReportsPage() {
       const data = await api.get(`/coconut/reports/summary/${selectedGrove}/${selectedYear}`);
       setReport(data);
     } catch (error) {
-      console.error('Failed to generate report:', error);
       setReport(null);
     } finally {
       setReportLoading(false);

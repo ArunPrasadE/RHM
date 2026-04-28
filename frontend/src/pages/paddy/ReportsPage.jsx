@@ -22,7 +22,6 @@ export default function ReportsPage() {
         setSelectedField(data[0].id.toString());
       }
     } catch (error) {
-      console.error('Failed to fetch fields:', error);
     } finally {
       setLoading(false);
     }
@@ -36,7 +35,6 @@ export default function ReportsPage() {
       const data = await api.get(`/paddy/reports/summary/${selectedField}/${selectedYear}/${selectedCrop}`);
       setReport(data);
     } catch (error) {
-      console.error('Failed to generate report:', error);
       setReport(null);
     } finally {
       setReportLoading(false);

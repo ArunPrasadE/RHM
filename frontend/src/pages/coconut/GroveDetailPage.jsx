@@ -22,7 +22,6 @@ export default function GroveDetailPage() {
       const data = await api.get(`/coconut/groves/${id}`);
       setGrove(data);
     } catch (error) {
-      console.error('Failed to fetch grove:', error);
     } finally {
       setLoading(false);
     }

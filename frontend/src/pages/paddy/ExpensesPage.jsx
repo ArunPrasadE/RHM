@@ -52,7 +52,6 @@ export default function ExpensesPage() {
       setWorkers(workersData);
       setCustomCategories(categoriesData);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -131,7 +130,6 @@ export default function ExpensesPage() {
       await api.delete(`/paddy/expenses/${expense.id}`);
       fetchData();
     } catch (error) {
-      console.error('Failed to delete expense:', error);
       alert('Failed to delete expense');
     }
   };
@@ -144,7 +142,6 @@ export default function ExpensesPage() {
       }
       fetchData();
     } catch (error) {
-      console.error('Failed to delete grouped expense:', error);
       alert('Failed to delete expense');
     }
   };
@@ -342,7 +339,6 @@ export default function ExpensesPage() {
               setEditingExpense(null);
               fetchData();
             } catch (error) {
-              console.error('Failed to save expense:', error);
               alert(`Failed to save expense: ${error.message || error}`);
             }
           }}
@@ -364,7 +360,6 @@ export default function ExpensesPage() {
               }
               fetchData();
             } catch (error) {
-              console.error('Failed to save category:', error);
               alert(`Failed to save category: ${error.message || error}`);
             }
           }}
@@ -373,7 +368,6 @@ export default function ExpensesPage() {
               await api.delete(`/paddy/expenses/categories/${id}`);
               fetchData();
             } catch (error) {
-              console.error('Failed to delete category:', error);
               alert(`Failed to delete category: ${error.message || error}`);
             }
           }}

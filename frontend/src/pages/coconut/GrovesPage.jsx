@@ -18,7 +18,6 @@ export default function GrovesPage() {
       const data = await api.get('/coconut/groves');
       setGroves(data);
     } catch (error) {
-      console.error('Failed to fetch groves:', error);
     } finally {
       setLoading(false);
     }
@@ -35,7 +34,6 @@ export default function GrovesPage() {
       setEditingGrove(null);
       fetchGroves();
     } catch (error) {
-      console.error('Failed to save grove:', error);
       alert('Failed to save grove');
     }
   };
@@ -51,7 +49,6 @@ export default function GrovesPage() {
       await api.delete(`/coconut/groves/${grove.id}`);
       fetchGroves();
     } catch (error) {
-      console.error('Failed to delete grove:', error);
       alert('Failed to delete grove');
     }
   };
