@@ -262,6 +262,59 @@ export default function ExpensesPage() {
             Add First Expense
           </button>
         </div>
+      ) : filterField === 'all' ? (
+        <div className="card text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">Select a specific field to see details</p>
+        </div>
+      ) : (
+        <div className="card overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b dark:border-gray-700">
+                <th className="text-left py-3 px-2">Date</th>
+                <th className="text-left py-3 px-2">Category</th>
+                <th className="text-left py-3 px-2">Worker</th>
+                <th className="text-right py-3 px-2">Amount</th>
+                <th className="text-right py-3 px-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.map((expense) => (
+                <tr key={expense.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="py-3 px-2">{expense.expense_date}</td>
+                  <td className="py-3 px-2">
+                    {getCategoryLabel(expense.category)}
+                    {expense.sequence_number && (
+                      <span className="ml-1 text-sm text-gray-500">#{expense.sequence_number}</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-2">
+                    {expense.worker_name || '-'}
+                  </td>
+                  <td className="py-3 px-2 text-right font-medium">
+                    {formatCurrency(expense.amount)}
+                  </td>
+                  <td className="py-3 px-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(expense)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(expense)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400"
+                      >
+                        <DeleteIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {showForm && (
@@ -432,7 +485,6 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
           notes: formData.notes || ''
         };
         
-        console.log('Updating expense with data:', payload); // Debug log
         await onSave(payload);
       } else if (isDirectExpense) {
         // Direct expense to selected field (no split) - e.g., patta_nel

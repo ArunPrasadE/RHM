@@ -30,12 +30,9 @@ export default function GroveDetailPage() {
 
   const fetchYearSummary = async () => {
     try {
-      console.log('Fetching summary for grove:', id, 'year:', filterYear);
       const summary = await api.get(`/coconut/reports/summary/${id}/${filterYear}`);
-      console.log('Summary received:', summary);
       setYearSummary(summary);
     } catch (error) {
-      console.error('Failed to fetch summary:', error);
       setYearSummary({});
     }
   };
