@@ -125,13 +125,13 @@ export default function ReportsPage() {
             <div className="card bg-red-50 dark:bg-red-900/20">
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Expenses (மொத்த செலவு)</p>
               <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-                {formatCurrency(report.totalExpenses || 0)}
+                {formatCurrency(report.expenses?.total || 0)}
               </p>
             </div>
             <div className="card bg-green-50 dark:bg-green-900/20">
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Income (மொத்த வருமானம்)</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                {formatCurrency(report.totalIncome || 0)}
+                {formatCurrency(report.income?.total || 0)}
               </p>
             </div>
             <div className={`card ${report.profit >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
@@ -145,11 +145,11 @@ export default function ReportsPage() {
           </div>
 
           {/* Expense Breakdown */}
-          {report.expensesByCategory && report.expensesByCategory.length > 0 && (
+          {report.expenses?.byCategory && report.expenses.byCategory.length > 0 && (
             <div className="card">
               <h3 className="text-lg font-semibold mb-4">Expense Breakdown (செலவு விவரம்)</h3>
               <div className="space-y-2">
-                {report.expensesByCategory.map((exp, idx) => (
+                {report.expenses.byCategory.map((exp, idx) => (
                   <div key={idx} className="flex justify-between py-2 border-b dark:border-gray-700 last:border-0">
                     <span>{exp.category}</span>
                     <span className="font-medium">{formatCurrency(exp.total)}</span>
@@ -160,11 +160,11 @@ export default function ReportsPage() {
           )}
 
           {/* Income Breakdown */}
-          {report.incomeByCategory && report.incomeByCategory.length > 0 && (
+          {report.income?.byCategory && report.income.byCategory.length > 0 && (
             <div className="card">
               <h3 className="text-lg font-semibold mb-4">Income Breakdown (வருமான விவரம்)</h3>
               <div className="space-y-2">
-                {report.incomeByCategory.map((inc, idx) => (
+                {report.income.byCategory.map((inc, idx) => (
                   <div key={idx} className="flex justify-between py-2 border-b dark:border-gray-700 last:border-0">
                     <div>
                       <span>{inc.category}</span>
