@@ -18,7 +18,6 @@ export default function FieldDetailPage() {
       const data = await api.get(`/paddy/fields/${id}`);
       setField(data);
     } catch (error) {
-      console.error('Failed to fetch field:', error);
     } finally {
       setLoading(false);
     }

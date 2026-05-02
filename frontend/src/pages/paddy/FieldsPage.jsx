@@ -20,7 +20,6 @@ export default function FieldsPage() {
       const data = await api.get('/paddy/fields');
       setFields(data);
     } catch (error) {
-      console.error('Failed to fetch fields:', error);
     } finally {
       setLoading(false);
     }
@@ -37,7 +36,6 @@ export default function FieldsPage() {
       setEditingField(null);
       fetchFields();
     } catch (error) {
-      console.error('Failed to save field:', error);
       alert('Failed to save field');
     }
   };
@@ -53,7 +51,6 @@ export default function FieldsPage() {
       await api.delete(`/paddy/fields/${field.id}`);
       fetchFields();
     } catch (error) {
-      console.error('Failed to delete field:', error);
       alert('Failed to delete field');
     }
   };

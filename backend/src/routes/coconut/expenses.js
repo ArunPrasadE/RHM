@@ -39,6 +39,138 @@ router.get('/', (req, res) => {
   }
 });
 
+// GET /api/coconut/expenses/categories - List all custom expense categories
+router.get('/categories', (req, res) => {
+  try {
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='coconut_expense_categories'").get();
+    console.log('GET Table exists:', tableExists);
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS coconut_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+      console.log('Table created');
+      return res.json([]);
+    }
+    const categories = db.prepare('SELECT * FROM coconut_expense_categories WHERE is_active = 1 ORDER BY label').all();
+    console.log('GET Categories found:', categories.length, categories);
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching expense categories:', error);
+    res.status(500).json({ error: 'Failed to fetch expense categories' });
+  }
+});
+
+// GET /api/coconut/expenses/categories/all - List ALL categories including inactive (for debugging)
+router.get('/categories/all', (req, res) => {
+  try {
+    const categories = db.prepare('SELECT * FROM coconut_expense_categories ORDER BY id DESC').all();
+    res.json(categories);
+  } catch (error) {
+    res.json([]);
+  }
+});
+
+// POST /api/coconut/expenses/categories - Add new expense category
+router.post('/categories', (req, res) => {
+  try {
+    const { value, label, label_tamil } = req.body;
+    console.log('Adding category:', value, label, label_tamil);
+
+    if (!value || !label) {
+      return res.status(400).json({ error: 'Value and label are required' });
+    }
+
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='coconut_expense_categories'").get();
+    console.log('POST Table exists:', tableExists);
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS coconut_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+      console.log('Table created');
+    }
+
+    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
+    console.log('Existing:', existing);
+    if (existing) {
+      db.prepare('UPDATE coconut_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
+      const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(existing.id);
+      console.log('Updated existing:', updated);
+      return res.status(201).json(updated);
+    }
+
+    const result = db.prepare('INSERT INTO coconut_expense_categories (value, label, label_tamil) VALUES (?, ?, ?)').run(value, label, label_tamil || null);
+    const newCategory = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(result.lastInsertRowid);
+    console.log('New category created:', newCategory);
+    res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('Error creating expense category:', error);
+    res.status(500).json({ error: 'Failed to create expense category' });
+  }
+});
+
+// PUT /api/coconut/expenses/categories/:id - Update expense category
+router.put('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const { value, label, label_tamil } = req.body;
+
+    db.prepare('UPDATE coconut_expense_categories SET value = ?, label = ?, label_tamil = ? WHERE id = ?').run(
+      value || existing.value,
+      label || existing.label,
+      label_tamil ?? existing.label_tamil,
+      req.params.id
+    );
+
+    const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating expense category:', error);
+    res.status(500).json({ error: 'Failed to update expense category' });
+  }
+});
+
+// DELETE /api/coconut/expenses/categories/:id - Soft delete expense category
+router.delete('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    db.prepare('UPDATE coconut_expense_categories SET is_active = 0 WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting expense category:', error);
+    res.status(500).json({ error: 'Failed to delete expense category' });
+  }
+});
+
+// DELETE /api/coconut/expenses/categories - Hard delete ALL categories (cleanup)
+router.delete('/categories', (req, res) => {
+  try {
+    db.prepare('DELETE FROM coconut_expense_categories').run();
+    res.json({ message: 'All categories deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete categories' });
+  }
+});
+
 // GET /api/coconut/expenses/:id
 router.get('/:id', (req, res) => {
   try {
@@ -55,11 +187,34 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/coconut/expenses - Split total amount across all groves by area
+// POST /api/coconut/expenses - Add expense for single grove or split across all
 router.post('/', (req, res) => {
   try {
-    const { year, category, total_amount, expense_date, worker_id, notes } = req.body;
+    const { grove_id, year, category, total_amount, amount, expense_date, worker_id, notes } = req.body;
 
+    // If specific grove_id is provided, add expense for that grove only (no split)
+    if (grove_id && amount && !total_amount) {
+      if (!year || !category || !amount || !expense_date) {
+        return res.status(400).json({ error: 'Year, category, amount, and date are required' });
+      }
+      
+      const result = db.prepare(`
+        INSERT INTO coconut_expenses (grove_id, year, category, amount, expense_date, worker_id, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(grove_id, year, category, amount, expense_date, worker_id || null, notes || null);
+
+      const newExpense = db.prepare('SELECT * FROM coconut_expenses WHERE id = ?').get(result.lastInsertRowid);
+      const grove = db.prepare('SELECT name FROM coconut_groves WHERE id = ?').get(grove_id);
+      
+      res.status(201).json({
+        message: `Expense added for ${grove?.name || 'grove'}`,
+        amount: amount,
+        expenses: [{ ...newExpense, grove_name: grove?.name }]
+      });
+      return;
+    }
+
+    // Default: Split across all groves
     if (!year || !category || !total_amount || !expense_date) {
       return res.status(400).json({ error: 'Year, category, total amount, and date are required' });
     }
@@ -226,6 +381,105 @@ router.delete('/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting expense:', error);
     res.status(500).json({ error: 'Failed to delete expense' });
+  }
+});
+
+// POST /api/coconut/expenses/categories - Add new expense category
+router.post('/categories', (req, res) => {
+  try {
+    const { value, label, label_tamil } = req.body;
+    console.log('Adding category:', value, label, label_tamil);
+
+    if (!value || !label) {
+      return res.status(400).json({ error: 'Value and label are required' });
+    }
+
+    // Check if table exists, create if not
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='coconut_expense_categories'").get();
+    console.log('Table exists:', tableExists);
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS coconut_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+      console.log('Table created');
+    }
+
+    // Check case-insensitively for existing - update if found
+    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
+    console.log('Existing:', existing);
+    if (existing) {
+      // Update existing record
+      db.prepare('UPDATE coconut_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
+      const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(existing.id);
+      console.log('Updated existing:', updated);
+      return res.status(201).json(updated);
+    }
+
+    const result = db.prepare('INSERT INTO coconut_expense_categories (value, label, label_tamil) VALUES (?, ?, ?)').run(value, label, label_tamil || null);
+    const newCategory = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(result.lastInsertRowid);
+    console.log('New category created:', newCategory);
+    res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('Error creating expense category:', error);
+    res.status(500).json({ error: 'Failed to create expense category' });
+  }
+});
+
+// PUT /api/coconut/expenses/categories/:id - Update expense category
+router.put('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const { value, label, label_tamil } = req.body;
+
+    db.prepare('UPDATE coconut_expense_categories SET value = ?, label = ?, label_tamil = ? WHERE id = ?').run(
+      value || existing.value,
+      label || existing.label,
+      label_tamil ?? existing.label_tamil,
+      req.params.id
+    );
+
+    const updated = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating expense category:', error);
+    res.status(500).json({ error: 'Failed to update expense category' });
+  }
+});
+
+// DELETE /api/coconut/expenses/categories/:id - Soft delete expense category
+router.delete('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM coconut_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    db.prepare('UPDATE coconut_expense_categories SET is_active = 0 WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting expense category:', error);
+    res.status(500).json({ error: 'Failed to delete expense category' });
+  }
+});
+
+// DELETE /api/coconut/expenses/categories - Hard delete ALL categories (cleanup)
+router.delete('/categories', (req, res) => {
+  try {
+    db.prepare('DELETE FROM coconut_expense_categories').run();
+    res.json({ message: 'All categories deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete categories' });
   }
 });
 

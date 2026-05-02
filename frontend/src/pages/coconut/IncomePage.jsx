@@ -4,6 +4,7 @@ import api, { formatCurrency } from '../../utils/api';
 const INCOME_CATEGORIES = [
   { value: 'thengai', label: 'Thengai', labelTamil: 'தேங்காய்' },
   { value: 'mangai', label: 'Mangai', labelTamil: 'மாங்காய்' },
+  { value: 'chakka', label: 'Chakka', labelTamil: 'சக்கா' },
 ];
 
 export default function IncomePage() {
@@ -28,7 +29,6 @@ export default function IncomePage() {
       setIncomes(incomeData);
       setGroves(grovesData);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -57,7 +57,6 @@ export default function IncomePage() {
       await api.delete(`/coconut/income/${income.id}`);
       fetchData();
     } catch (error) {
-      console.error('Failed to delete income:', error);
       alert('Failed to delete income');
     }
   };
@@ -122,8 +121,28 @@ export default function IncomePage() {
               {formatCurrency(totalIncome)}
             </p>
           </div>
+</div>
         </div>
-      </div>
+
+        {/* Category Summary */}
+        {incomes.length > 0 && (
+          <div className="card">
+            <h3 className="font-medium mb-3">Summary by Category (வகை வாரியாக)</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(
+                incomes.reduce((acc, inc) => {
+                  acc[inc.category] = (acc[inc.category] || 0) + inc.amount;
+                  return acc;
+                }, {})
+              ).map(([cat, total]) => (
+                <div key={cat} className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                  <p className="text-sm text-gray-500">{getCategoryLabel(cat)}</p>
+                  <p className="font-bold text-green-600">{formatCurrency(total)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Income List */}
       {incomes.length === 0 ? (
@@ -136,6 +155,10 @@ export default function IncomePage() {
             Add First Income
           </button>
         </div>
+      ) : filterGrove === 'all' ? (
+        <div className="card text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">Select a specific grove to see details</p>
+        </div>
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
@@ -144,8 +167,8 @@ export default function IncomePage() {
                 <th className="text-left py-3 px-2">Date</th>
                 <th className="text-left py-3 px-2">Grove</th>
                 <th className="text-left py-3 px-2">Category</th>
-                <th className="text-right py-3 px-2">Qty (kg)</th>
-                <th className="text-right py-3 px-2">Rate/kg</th>
+                <th className="text-right py-3 px-2">Qty (kg/nos)</th>
+                <th className="text-right py-3 px-2">Unit Rate</th>
                 <th className="text-right py-3 px-2">Amount</th>
                 <th className="text-right py-3 px-2">Actions</th>
               </tr>
@@ -153,14 +176,16 @@ export default function IncomePage() {
             <tbody>
               {incomes.map((income) => (
                 <tr key={income.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="py-3 px-2">{income.income_date}</td>
+                  <td className="py-3 px-2">{income.income_date}{income.sale_time ? ` ${income.sale_time}` : ''}</td>
                   <td className="py-3 px-2">{getGroveName(income.grove_id)}</td>
                   <td className="py-3 px-2">{getCategoryLabel(income.category)}</td>
                   <td className="py-3 px-2 text-right">
-                    {income.quantity_kg ? `${income.quantity_kg} kg` : '-'}
+                    {income.unit_type === 'count' 
+                      ? (income.quantity_count ? `${income.quantity_count} nos` : '-')
+                      : (income.quantity_kg ? `${income.quantity_kg} kg` : '-')}
                   </td>
                   <td className="py-3 px-2 text-right">
-                    {income.rate_per_kg ? formatCurrency(income.rate_per_kg) : '-'}
+                    {formatCurrency(income.rate_per_unit || income.rate_per_kg || 0)}
                   </td>
                   <td className="py-3 px-2 text-right font-medium text-green-600 dark:text-green-400">
                     {formatCurrency(income.amount)}
@@ -205,8 +230,7 @@ export default function IncomePage() {
               setEditingIncome(null);
               fetchData();
             } catch (error) {
-              console.error('Failed to save income:', error);
-              alert('Failed to save income');
+              alert(`Failed to save income: ${error.message || error}`);
             }
           }}
           onClose={() => { setShowForm(false); setEditingIncome(null); }}
@@ -218,20 +242,35 @@ export default function IncomePage() {
 
 function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }) {
   const isEditing = !!income;
+  
+  const getCurrentTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  };
+  
   const [formData, setFormData] = useState({
     grove_id: income?.grove_id || groves[0]?.id || '',
     year: income?.year || defaultYear,
     category: income?.category || 'thengai',
+    unit_type: income?.unit_type || 'kg',
     quantity_kg: income?.quantity_kg || '',
-    rate_per_kg: income?.rate_per_kg || '',
+    quantity_count: income?.quantity_count || '',
+    rate_per_unit: income?.rate_per_unit || '',
     income_date: income?.income_date || new Date().toISOString().split('T')[0],
+    sale_time: income?.sale_time || (isEditing ? income?.sale_time : getCurrentTime()),
     notes: income?.notes || ''
   });
   const [loading, setLoading] = useState(false);
 
-  const calculatedAmount = formData.quantity_kg && formData.rate_per_kg
-    ? (parseFloat(formData.quantity_kg) * parseFloat(formData.rate_per_kg)).toFixed(2)
-    : '';
+  const calculatedAmount = (() => {
+    if (formData.unit_type === 'kg' && formData.quantity_kg && formData.rate_per_unit) {
+      return (parseFloat(formData.quantity_kg) * parseFloat(formData.rate_per_unit)).toFixed(2);
+    }
+    if (formData.unit_type === 'count' && formData.quantity_count && formData.rate_per_unit) {
+      return (parseFloat(formData.quantity_count) * parseFloat(formData.rate_per_unit)).toFixed(2);
+    }
+    return '';
+  })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -241,10 +280,13 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
         grove_id: parseInt(formData.grove_id),
         year: formData.year,
         category: formData.category,
-        quantity_kg: parseFloat(formData.quantity_kg),
-        rate_per_kg: parseFloat(formData.rate_per_kg),
+        unit_type: formData.unit_type,
+        quantity_kg: formData.unit_type === 'kg' ? parseFloat(formData.quantity_kg) : null,
+        quantity_count: formData.unit_type === 'count' ? parseInt(formData.quantity_count) : null,
+        rate_per_unit: parseFloat(formData.rate_per_unit),
         amount: parseFloat(calculatedAmount),
         income_date: formData.income_date,
+        sale_time: formData.sale_time || null,
         notes: formData.notes
       };
 
@@ -299,28 +341,63 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
               </div>
             </div>
 
+            <div>
+              <label className="label">Unit Type (அலகு) *</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="unit_type"
+                    value="kg"
+                    checked={formData.unit_type === 'kg'}
+                    onChange={(e) => setFormData({ ...formData, unit_type: e.target.value })}
+                    className="w-4 h-4"
+                  />
+                  <span>KG (கிலோ)</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="unit_type"
+                    value="count"
+                    checked={formData.unit_type === 'count'}
+                    onChange={(e) => setFormData({ ...formData, unit_type: e.target.value })}
+                    className="w-4 h-4"
+                  />
+                  <span>Count (எண்ணிக்கை)</span>
+                </label>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">Quantity (அளவு) kg *</label>
+                <label className="label">
+                  {formData.unit_type === 'kg' ? 'Quantity (அளவு) kg *' : 'Count (எண்ணிக்கை) *'}
+                </label>
                 <input
                   type="number"
-                  value={formData.quantity_kg}
-                  onChange={(e) => setFormData({ ...formData, quantity_kg: e.target.value })}
+                  value={formData.unit_type === 'kg' ? formData.quantity_kg : formData.quantity_count}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    [formData.unit_type === 'kg' ? 'quantity_kg' : 'quantity_count']: e.target.value 
+                  })}
                   className="input"
-                  placeholder="Enter kg"
+                  placeholder={formData.unit_type === 'kg' ? 'Enter kg' : 'Enter count'}
                   min="0"
-                  step="0.1"
+                  step={formData.unit_type === 'kg' ? '0.1' : '1'}
                   required
                 />
               </div>
               <div>
-                <label className="label">Rate per kg (விலை/கிலோ) *</label>
+                <label className="label">
+                  {formData.unit_type === 'kg' ? 'Rate per kg (விலை/கிலோ) *' : 'Rate per unit (விலை/அலகு) *'}
+                </label>
                 <input
                   type="number"
-                  value={formData.rate_per_kg}
-                  onChange={(e) => setFormData({ ...formData, rate_per_kg: e.target.value })}
+                  value={formData.rate_per_unit}
+                  onChange={(e) => setFormData({ ...formData, rate_per_unit: e.target.value })}
                   className="input"
-                  placeholder="Rate per kg"
+                  placeholder={formData.unit_type === 'kg' ? 'Rate per kg' : 'Rate per unit'}
                   min="0"
                   step="0.1"
                   required
@@ -339,15 +416,26 @@ function IncomeForm({ income, groves, categories, defaultYear, onSave, onClose }
               />
             </div>
 
-            <div>
-              <label className="label">Date (தேதி) *</label>
-              <input
-                type="date"
-                value={formData.income_date}
-                onChange={(e) => setFormData({ ...formData, income_date: e.target.value })}
-                className="input"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Date (தேதி) *</label>
+                <input
+                  type="date"
+                  value={formData.income_date}
+                  onChange={(e) => setFormData({ ...formData, income_date: e.target.value })}
+                  className="input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Time (நேரம்)</label>
+                <input
+                  type="time"
+                  value={formData.sale_time}
+                  onChange={(e) => setFormData({ ...formData, sale_time: e.target.value })}
+                  className="input"
+                />
+              </div>
             </div>
 
             <div>

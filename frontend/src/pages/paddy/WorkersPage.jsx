@@ -27,7 +27,6 @@ export default function WorkersPage() {
       setWorkers(workersData);
       setCategories(categoriesData);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -38,7 +37,6 @@ export default function WorkersPage() {
       const data = await api.get('/paddy/workers');
       setWorkers(data);
     } catch (error) {
-      console.error('Failed to fetch workers:', error);
     }
   };
 
@@ -53,7 +51,6 @@ export default function WorkersPage() {
       setEditingWorker(null);
       fetchWorkers();
     } catch (error) {
-      console.error('Failed to save worker:', error);
       alert('Failed to save worker');
     }
   };
@@ -69,7 +66,6 @@ export default function WorkersPage() {
       await api.delete(`/paddy/workers/${worker.id}`);
       fetchWorkers();
     } catch (error) {
-      console.error('Failed to delete worker:', error);
       alert('Failed to delete worker');
     }
   };
@@ -86,7 +82,6 @@ export default function WorkersPage() {
       setNewCategory({ value: '', label: '', label_tamil: '' });
       fetchData();
     } catch (error) {
-      console.error('Failed to add category:', error);
       alert(error.response?.data?.error || 'Failed to add category');
     }
   };
@@ -105,7 +100,6 @@ export default function WorkersPage() {
       setEditingCategory(null);
       fetchData();
     } catch (error) {
-      console.error('Failed to update category:', error);
       alert(error.response?.data?.error || 'Failed to update category');
     }
   };
@@ -119,7 +113,6 @@ export default function WorkersPage() {
       }
       fetchData();
     } catch (error) {
-      console.error('Failed to delete category:', error);
       alert('Failed to delete category');
     }
   };

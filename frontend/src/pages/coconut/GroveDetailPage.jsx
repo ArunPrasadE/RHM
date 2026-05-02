@@ -1,24 +1,38 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api from '../../utils/api';
+import api, { formatCurrency } from '../../utils/api';
 
 export default function GroveDetailPage() {
   const { id } = useParams();
   const [grove, setGrove] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [yearSummary, setYearSummary] = useState({});
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     fetchGrove();
   }, [id]);
+
+  useEffect(() => {
+    fetchYearSummary();
+  }, [id, filterYear]);
 
   const fetchGrove = async () => {
     try {
       const data = await api.get(`/coconut/groves/${id}`);
       setGrove(data);
     } catch (error) {
-      console.error('Failed to fetch grove:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchYearSummary = async () => {
+    try {
+      const summary = await api.get(`/coconut/reports/summary/${id}/${filterYear}`);
+      setYearSummary(summary);
+    } catch (error) {
+      setYearSummary({});
     }
   };
 
@@ -94,12 +108,87 @@ export default function GroveDetailPage() {
         </div>
       </div>
 
-      {/* Placeholder for expenses and income summary */}
+      {/* Yearly Summary */}
       <div className="card">
-        <h2 className="text-lg font-semibold mb-4">Yearly Summary (வருடாந்திர சுருக்கம்)</h2>
-        <p className="text-gray-500 dark:text-gray-400">
-          Expense and income summary will appear here once data is added.
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Yearly Summary (வருடாந்திர சுருக்கம்)</h2>
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(parseInt(e.target.value))}
+            className="input w-32"
+          >
+            {[...Array(5)].map((_, i) => {
+              const year = new Date().getFullYear() - i;
+              return <option key={year} value={year}>{year}</option>;
+            })}
+          </select>
+        </div>
+        
+        {yearSummary.grove ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                <p className="text-sm text-green-600 dark:text-green-400">Total Income</p>
+                <p className="text-xl font-bold text-green-600">{formatCurrency(yearSummary.income?.total || 0)}</p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">Total Expenses</p>
+                <p className="text-xl font-bold text-red-600">{formatCurrency(yearSummary.expenses?.total || 0)}</p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 dark:text-blue-400">Net Profit</p>
+                <p className={`text-xl font-bold ${(yearSummary.income?.total - yearSummary.expenses?.total) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                  {formatCurrency((yearSummary.income?.total || 0) - (yearSummary.expenses?.total || 0))}
+                </p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Profit %</p>
+                <p className="text-xl font-bold text-gray-600 dark:text-gray-300">
+                  {yearSummary.income?.total > 0 
+                    ? (((yearSummary.income?.total - yearSummary.expenses?.total) / yearSummary.income?.total * 100)).toFixed(1)
+                    : 0}%
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-medium mb-2">Income by Category</h3>
+                {yearSummary.income?.byCategory?.length > 0 ? (
+                  <div className="space-y-1">
+                    {yearSummary.income.byCategory.map((item) => (
+                      <div key={item.category} className="flex justify-between text-sm">
+                        <span>{item.category}</span>
+                        <span className="font-medium">{formatCurrency(item.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No income data</p>
+                )}
+              </div>
+              <div>
+                <h3 className="font-medium mb-2">Expenses by Category</h3>
+                {yearSummary.expenses?.byCategory?.length > 0 ? (
+                  <div className="space-y-1">
+                    {yearSummary.expenses.byCategory.map((item) => (
+                      <div key={item.category} className="flex justify-between text-sm">
+                        <span>{item.category}</span>
+                        <span className="font-medium">{formatCurrency(item.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No expense data</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400">
+            No data available for {filterYear}
+          </p>
+        )}
       </div>
     </div>
   );

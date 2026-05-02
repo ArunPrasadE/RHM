@@ -19,7 +19,6 @@ export default function CoconutDashboardPage() {
         totalAreaCents: grovesData.reduce((sum, g) => sum + g.area_cents, 0)
       });
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
       setStats({ totalGroves: 0, totalAreaCents: 0 });
     } finally {
       setLoading(false);

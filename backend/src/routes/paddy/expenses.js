@@ -37,10 +37,128 @@ router.get('/', (req, res) => {
     query += ' ORDER BY expense_date DESC';
 
     const expenses = db.prepare(query).all(...params);
-    res.json(expenses);
+    
+    // Add worker and field names
+    const workers = db.prepare('SELECT id, name FROM paddy_workers WHERE is_active = 1').all();
+    const fields = db.prepare('SELECT id, name FROM paddy_fields WHERE is_active = 1').all();
+    const workerMap = {};
+    const fieldMap = {};
+    workers.forEach(w => workerMap[w.id] = w.name);
+    fields.forEach(f => fieldMap[f.id] = f.name);
+    
+    const result = expenses.map(e => ({
+      ...e,
+      worker_name: e.worker_id ? workerMap[e.worker_id] : null,
+      field_name: fieldMap[e.field_id] || null
+    }));
+    
+    res.json(result);
   } catch (error) {
     console.error('Error fetching expenses:', error);
     res.status(500).json({ error: 'Failed to fetch expenses' });
+  }
+});
+
+// GET /api/paddy/expenses/categories - List all custom expense categories
+router.get('/categories', (req, res) => {
+  try {
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='paddy_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS paddy_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+      return res.json([]);
+    }
+    const categories = db.prepare('SELECT * FROM paddy_expense_categories WHERE is_active = 1 ORDER BY label').all();
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching expense categories:', error);
+    res.status(500).json({ error: 'Failed to fetch expense categories' });
+  }
+});
+
+// POST /api/paddy/expenses/categories - Add new expense category
+router.post('/categories', (req, res) => {
+  try {
+    const { value, label, label_tamil } = req.body;
+
+    if (!value || !label) {
+      return res.status(400).json({ error: 'Value and label are required' });
+    }
+
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='paddy_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS paddy_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+    }
+
+    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
+    if (existing) {
+      db.prepare('UPDATE paddy_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
+      const updated = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(existing.id);
+      return res.status(201).json(updated);
+    }
+
+    const result = db.prepare('INSERT INTO paddy_expense_categories (value, label, label_tamil) VALUES (?, ?, ?)').run(value, label, label_tamil || null);
+    const newCategory = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('Error creating expense category:', error);
+    res.status(500).json({ error: 'Failed to create expense category' });
+  }
+});
+
+// PUT /api/paddy/expenses/categories/:id - Update expense category
+router.put('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const { value, label, label_tamil } = req.body;
+
+    db.prepare('UPDATE paddy_expense_categories SET value = ?, label = ?, label_tamil = ? WHERE id = ?').run(
+      value || existing.value,
+      label || existing.label,
+      label_tamil ?? existing.label_tamil,
+      req.params.id
+    );
+
+    const updated = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating expense category:', error);
+    res.status(500).json({ error: 'Failed to update expense category' });
+  }
+});
+
+// DELETE /api/paddy/expenses/categories/:id - Soft delete expense category
+router.delete('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    db.prepare('UPDATE paddy_expense_categories SET is_active = 0 WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting expense category:', error);
+    res.status(500).json({ error: 'Failed to delete expense category' });
   }
 });
 
@@ -60,22 +178,64 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/paddy/expenses - Split total amount across all fields by area
+// POST /api/paddy/expenses - Split total amount across all fields OR direct to single field
 router.post('/', (req, res) => {
   try {
     const {
+      field_id,
       year,
       crop_number,
       category,
       sequence_number,
       total_amount,
+      amount,
       expense_date,
       worker_id,
       notes
     } = req.body;
 
-    if (!year || !crop_number || !category || !total_amount || !expense_date) {
-      return res.status(400).json({ error: 'Year, crop number, category, total amount, and date are required' });
+    if (!year || !crop_number || !category || !expense_date) {
+      return res.status(400).json({ error: 'Year, crop number, category, and date are required' });
+    }
+
+    // Check if this is a direct expense to a single field (e.g., patta_nel)
+    if (field_id && amount && !total_amount) {
+      // Direct expense - no split
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ error: 'Amount is required for direct expenses' });
+      }
+
+      const insertStmt = db.prepare(`
+        INSERT INTO paddy_expenses (field_id, year, crop_number, category, sequence_number, amount, expense_date, worker_id, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const result = insertStmt.run(
+        field_id,
+        year,
+        crop_number,
+        category,
+        sequence_number || null,
+        amount,
+        expense_date,
+        null, // No worker for direct expenses like patta_nel
+        notes || null
+      );
+
+      const newExpense = db.prepare('SELECT * FROM paddy_expenses WHERE id = ?').get(result.lastInsertRowid);
+      const field = db.prepare('SELECT name FROM paddy_fields WHERE id = ?').get(field_id);
+
+      res.status(201).json({
+        message: `Direct expense added to ${field?.name || 'field'}`,
+        amount: amount,
+        expenses: [{ ...newExpense, field_name: field?.name }]
+      });
+      return;
+    }
+
+    // Default behavior: split across all fields
+    if (!total_amount) {
+      return res.status(400).json({ error: 'Total amount is required for split expenses' });
     }
 
     // Get all active fields with their areas
@@ -290,6 +450,112 @@ router.delete('/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting expense:', error);
     res.status(500).json({ error: 'Failed to delete expense' });
+  }
+});
+
+// GET /api/paddy/expenses/categories - List all custom expense categories
+router.get('/categories', (req, res) => {
+  try {
+    // Check if table exists, create if not
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='paddy_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS paddy_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+      return res.json([]);
+    }
+    const categories = db.prepare('SELECT * FROM paddy_expense_categories WHERE is_active = 1 ORDER BY label').all();
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching expense categories:', error);
+    res.status(500).json({ error: 'Failed to fetch expense categories' });
+  }
+});
+
+// POST /api/paddy/expenses/categories - Add new expense category
+router.post('/categories', (req, res) => {
+  try {
+    const { value, label, label_tamil } = req.body;
+
+    if (!value || !label) {
+      return res.status(400).json({ error: 'Value and label are required' });
+    }
+
+    // Check if table exists, create if not
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='paddy_expense_categories'").get();
+    if (!tableExists) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS paddy_expense_categories (
+        id INTEGER PRIMARY KEY,
+        value TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        label_tamil TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).run();
+    }
+
+    // Check case-insensitively for existing - update if found
+    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE LOWER(value) = LOWER(?)').get(value);
+    if (existing) {
+      db.prepare('UPDATE paddy_expense_categories SET is_active = 1, label = ?, label_tamil = ? WHERE id = ?').run(label, label_tamil || null, existing.id);
+      const updated = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(existing.id);
+      return res.status(201).json(updated);
+    }
+
+    const result = db.prepare('INSERT INTO paddy_expense_categories (value, label, label_tamil) VALUES (?, ?, ?)').run(value, label, label_tamil || null);
+    const newCategory = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('Error creating expense category:', error);
+    res.status(500).json({ error: 'Failed to create expense category' });
+  }
+});
+
+// PUT /api/paddy/expenses/categories/:id - Update expense category
+router.put('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const { value, label, label_tamil } = req.body;
+
+    db.prepare('UPDATE paddy_expense_categories SET value = ?, label = ?, label_tamil = ? WHERE id = ?').run(
+      value || existing.value,
+      label || existing.label,
+      label_tamil ?? existing.label_tamil,
+      req.params.id
+    );
+
+    const updated = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating expense category:', error);
+    res.status(500).json({ error: 'Failed to update expense category' });
+  }
+});
+
+// DELETE /api/paddy/expenses/categories/:id - Soft delete expense category
+router.delete('/categories/:id', (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM paddy_expense_categories WHERE id = ?').get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    db.prepare('UPDATE paddy_expense_categories SET is_active = 0 WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting expense category:', error);
+    res.status(500).json({ error: 'Failed to delete expense category' });
   }
 });
 

@@ -189,6 +189,16 @@ export function initializeDatabase() {
       FOREIGN KEY (field_id) REFERENCES paddy_fields(id)
     );
 
+    -- Paddy Expense Categories (custom categories)
+    CREATE TABLE IF NOT EXISTS paddy_expense_categories (
+      id INTEGER PRIMARY KEY,
+      value TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      label_tamil TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- ========================
     -- COCONUT GROVE MANAGEMENT
     -- ========================
@@ -237,13 +247,26 @@ export function initializeDatabase() {
       grove_id INTEGER NOT NULL,
       year INTEGER NOT NULL,
       category TEXT NOT NULL,
-      quantity_kg REAL NOT NULL,
-      rate_per_kg REAL NOT NULL,
+      unit_type TEXT NOT NULL DEFAULT 'kg',
+      quantity_kg REAL,
+      quantity_count INTEGER,
+      rate_per_unit REAL NOT NULL,
       amount REAL NOT NULL,
       income_date DATE NOT NULL,
+      sale_time TEXT,
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (grove_id) REFERENCES coconut_groves(id)
+    );
+
+    -- Coconut Expense Categories (custom categories)
+    CREATE TABLE IF NOT EXISTS coconut_expense_categories (
+      id INTEGER PRIMARY KEY,
+      value TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      label_tamil TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     -- ========================

@@ -29,7 +29,6 @@ export default function IncomePage() {
       setIncomes(incomeData);
       setFields(fieldsData);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -58,7 +57,6 @@ export default function IncomePage() {
       await api.delete(`/paddy/income/${income.id}`);
       fetchData();
     } catch (error) {
-      console.error('Failed to delete income:', error);
       alert('Failed to delete income');
     }
   };
@@ -137,6 +135,26 @@ export default function IncomePage() {
         </div>
       </div>
 
+      {/* Category Summary */}
+      {incomes.length > 0 && (
+        <div className="card">
+          <h3 className="font-medium mb-3">Summary by Category (வகை வாரியாக)</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {Object.entries(
+              incomes.reduce((acc, inc) => {
+                acc[inc.category] = (acc[inc.category] || 0) + inc.amount;
+                return acc;
+              }, {})
+            ).map(([cat, total]) => (
+              <div key={cat} className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                <p className="text-sm text-gray-500">{getCategoryLabel(cat)}</p>
+                <p className="font-bold text-green-600 dark:text-green-400">{formatCurrency(total)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Income List */}
       {incomes.length === 0 ? (
         <div className="card text-center py-12">
@@ -147,6 +165,10 @@ export default function IncomePage() {
           >
             Add First Income
           </button>
+        </div>
+      ) : filterField === 'all' ? (
+        <div className="card text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">Select a specific field to see details</p>
         </div>
       ) : (
         <div className="card overflow-x-auto">
@@ -222,7 +244,6 @@ export default function IncomePage() {
               setEditingIncome(null);
               fetchData();
             } catch (error) {
-              console.error('Failed to save income:', error);
               alert('Failed to save income');
             }
           }}

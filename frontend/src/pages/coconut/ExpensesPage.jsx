@@ -16,11 +16,20 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [groves, setGroves] = useState([]);
   const [workers, setWorkers] = useState([]);
+  const [customCategories, setCustomCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterGrove, setFilterGrove] = useState('all');
+
+  const allCategories = [...EXPENSE_CATEGORIES, ...customCategories.map(c => ({
+    id: c.id,
+    value: c.value,
+    label: c.label,
+    labelTamil: c.label_tamil || ''
+  }))];
 
   useEffect(() => {
     fetchData();
@@ -28,6 +37,8 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
+      const categoriesRes = await api.get('/coconut/expenses/categories');
+      
       const [expensesData, grovesData, workersData] = await Promise.all([
         api.get(`/coconut/expenses?year=${filterYear}${filterGrove !== 'all' ? `&grove_id=${filterGrove}` : ''}`),
         api.get('/coconut/groves'),
@@ -36,16 +47,16 @@ export default function ExpensesPage() {
       setExpenses(expensesData);
       setGroves(grovesData);
       setWorkers(workersData);
+      setCustomCategories(categoriesRes || []);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const getCategoryLabel = (category) => {
-    const cat = EXPENSE_CATEGORIES.find(c => c.value === category);
-    return cat ? `${cat.label} (${cat.labelTamil})` : category;
+    const cat = allCategories.find(c => c.value === category);
+    return cat ? `${cat.label} (${cat.labelTamil || ''})` : category;
   };
 
   const getGroveName = (groveId) => {
@@ -99,7 +110,6 @@ export default function ExpensesPage() {
       await api.delete(`/coconut/expenses/${expense.id}`);
       fetchData();
     } catch (error) {
-      console.error('Failed to delete expense:', error);
       alert('Failed to delete expense');
     }
   };
@@ -112,7 +122,6 @@ export default function ExpensesPage() {
       }
       fetchData();
     } catch (error) {
-      console.error('Failed to delete grouped expense:', error);
       alert('Failed to delete expense');
     }
   };
@@ -134,12 +143,20 @@ export default function ExpensesPage() {
             (செலவுகள்)
           </span>
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn btn-primary"
-        >
-          + Add Expense
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCategoryForm(true)}
+            className="btn btn-secondary"
+          >
+            Categories
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn btn-primary"
+          >
+            + Add Expense
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -177,8 +194,28 @@ export default function ExpensesPage() {
               {formatCurrency(totalExpenses)}
             </p>
           </div>
+</div>
         </div>
-      </div>
+
+        {/* Category Summary */}
+        {expenses.length > 0 && (
+          <div className="card">
+            <h3 className="font-medium mb-3">Summary by Category (வகை வாரியாக)</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(
+                expenses.reduce((acc, exp) => {
+                  acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+                  return acc;
+                }, {})
+              ).map(([cat, total]) => (
+                <div key={cat} className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                  <p className="text-sm text-gray-500">{getCategoryLabel(cat)}</p>
+                  <p className="font-bold text-red-600">{formatCurrency(total)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Expenses List */}
       {expenses.length === 0 ? (
@@ -192,48 +229,10 @@ export default function ExpensesPage() {
           </button>
         </div>
       ) : filterGrove === 'all' ? (
-        /* Grouped view - show category totals */
-        <div className="card overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b dark:border-gray-700">
-                <th className="text-left py-3 px-2">Date</th>
-                <th className="text-left py-3 px-2">Category</th>
-                <th className="text-right py-3 px-2">Total Amount</th>
-                <th className="text-right py-3 px-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupedExpenses()?.map((group, idx) => (
-                <tr key={idx} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="py-3 px-2">{group.expense_date}</td>
-                  <td className="py-3 px-2">{getCategoryLabel(group.category)}</td>
-                  <td className="py-3 px-2 text-right font-medium text-red-600 dark:text-red-400">
-                    {formatCurrency(group.total_amount)}
-                  </td>
-                  <td className="py-3 px-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEditGrouped(group)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
-                      >
-                        <EditIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteGrouped(group)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400"
-                      >
-                        <DeleteIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="card text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">Select a specific grove to see details</p>
         </div>
       ) : (
-        /* Individual grove view - show split values with edit/delete */
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -280,7 +279,7 @@ export default function ExpensesPage() {
           expense={editingExpense}
           groves={groves}
           workers={workers}
-          categories={EXPENSE_CATEGORIES}
+          categories={allCategories}
           defaultYear={filterYear}
           onSave={async (data) => {
             try {
@@ -298,11 +297,39 @@ export default function ExpensesPage() {
               setEditingExpense(null);
               fetchData();
             } catch (error) {
-              console.error('Failed to save expense:', error);
               alert('Failed to save expense');
             }
           }}
           onClose={() => { setShowForm(false); setEditingExpense(null); }}
+        />
+      )}
+
+      {showCategoryForm && (
+        <CategoryManagerModal
+          categories={customCategories}
+          allCategories={allCategories}
+          onRefresh={fetchData}
+          onSave={async (data) => {
+            try {
+              if (data.id) {
+                await api.put(`/coconut/expenses/categories/${data.id}`, data);
+              } else {
+                await api.post('/coconut/expenses/categories', data);
+              }
+              await fetchData();
+            } catch (error) {
+              alert(`Failed to save category: ${error.message || error}`);
+            }
+          }}
+          onDelete={async (id) => {
+            try {
+              await api.delete(`/coconut/expenses/categories/${id}`);
+              await fetchData();
+            } catch (error) {
+              alert(`Failed to delete category: ${error.message || error}`);
+            }
+          }}
+          onClose={() => setShowCategoryForm(false)}
         />
       )}
     </div>
@@ -327,12 +354,11 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
   // Calculate total area for split preview
   const totalAreaCents = groves.reduce((sum, g) => sum + g.area_cents, 0);
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (isGrouped) {
-        // When editing grouped, update all related expenses with new total
         await onSave({
           category: formData.category,
           expense_date: formData.expense_date,
@@ -342,10 +368,8 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
           notes: formData.notes
         });
       } else if (isEditing) {
-        // When editing single expense
         await onSave({
           grove_id: parseInt(formData.grove_id),
-          year: formData.year,
           category: formData.category,
           worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
           amount: parseFloat(formData.amount),
@@ -353,12 +377,27 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
           notes: formData.notes
         });
       } else {
-        // When adding new, split across groves
-        await onSave({
-          ...formData,
-          total_amount: parseFloat(formData.total_amount),
-          worker_id: formData.worker_id ? parseInt(formData.worker_id) : null
-        });
+        // New expense - check if specific grove selected or all
+        const selectedGroveId = parseInt(formData.grove_id);
+        if (selectedGroveId) {
+          // Specific grove - no split
+          await onSave({
+            grove_id: selectedGroveId,
+            year: formData.year,
+            category: formData.category,
+            amount: parseFloat(formData.amount),
+            expense_date: formData.expense_date,
+            worker_id: formData.worker_id ? parseInt(formData.worker_id) : null,
+            notes: formData.notes
+          });
+        } else {
+          // All groves - split
+          await onSave({
+            ...formData,
+            total_amount: parseFloat(formData.total_amount),
+            worker_id: formData.worker_id ? parseInt(formData.worker_id) : null
+          });
+        }
       }
     } finally {
       setLoading(false);
@@ -381,7 +420,25 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Show grove dropdown only when editing single expense (not grouped) */}
+            {/* Show grove dropdown for new expenses or editing */}
+            {(!isEditing || isGrouped) && (
+              <div>
+                <label className="label">Grove (தோப்பு) *</label>
+                <select
+                  value={formData.grove_id}
+                  onChange={(e) => setFormData({ ...formData, grove_id: e.target.value })}
+                  className="input"
+                  required
+                >
+                  <option value="">All Groves (எல்லா தோப்புகள்)</option>
+                  {groves.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Show grove dropdown when editing single expense */}
             {isEditing && !isGrouped && (
               <div>
                 <label className="label">Grove (தோப்பு) *</label>
@@ -457,17 +514,17 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
             <div className="grid grid-cols-2 gap-4 items-end">
               <div>
                 <label className="label whitespace-nowrap">
-                  {isEditing && !isGrouped ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
+                  {(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? 'Amount (தொகை) *' : 'Total Amount (மொத்த தொகை) *'}
                 </label>
                 <input
                   type="number"
-                  value={isEditing && !isGrouped ? formData.amount : formData.total_amount}
+                  value={(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? formData.amount : formData.total_amount}
                   onChange={(e) => setFormData({
                     ...formData,
-                    [isEditing && !isGrouped ? 'amount' : 'total_amount']: e.target.value
+                    [(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? 'amount' : 'total_amount']: e.target.value
                   })}
                   className="input"
-                  placeholder={isEditing && !isGrouped ? 'Enter amount' : 'Enter total'}
+                  placeholder={(isEditing && !isGrouped) || (!isEditing && formData.grove_id) ? 'Enter amount' : 'Enter total'}
                   min="0"
                   step="1"
                   required
@@ -486,8 +543,8 @@ function ExpenseForm({ expense, groves, workers, categories, defaultYear, onSave
               </div>
             </div>
 
-            {/* Split Preview - for new expenses and grouped edits */}
-            {(!isEditing || isGrouped) && formData.total_amount && groves.length > 0 && (
+            {/* Split Preview - for new expenses when ALL GROVES selected and grouped edits */}
+            {((!isEditing && !formData.grove_id) || isGrouped) && formData.total_amount && groves.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">
                   {isGrouped ? 'New Split Preview (புதிய பிரிவு முன்னோட்டம்):' : 'Split Preview (பிரிவு முன்னோட்டம்):'}
@@ -545,5 +602,130 @@ function DeleteIcon({ className }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
+  );
+}
+
+function CategoryManagerModal({ categories, allCategories, onRefresh, onSave, onDelete, onClose }) {
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [formData, setFormData] = useState({
+    value: '',
+    label: '',
+    label_tamil: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave(editingCategory ? { ...formData, id: editingCategory.id } : formData);
+      setEditingCategory(null);
+      setFormData({ value: '', label: '', label_tamil: '' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (category) => {
+    setEditingCategory(category);
+    setFormData({
+      value: category.value,
+      label: category.label,
+      label_tamil: category.label_tamil || ''
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold">Manage Categories (வகைகள்)</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+            <div>
+              <label className="label">Value (API key) *</label>
+              <input
+                type="text"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                className="input"
+                placeholder="e.g., my_category"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Label (English) *</label>
+              <input
+                type="text"
+                value={formData.label}
+                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                className="input"
+                placeholder="e.g., My Category"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Label (Tamil)</label>
+              <input
+                type="text"
+                value={formData.label_tamil}
+                onChange={(e) => setFormData({ ...formData, label_tamil: e.target.value })}
+                className="input"
+                placeholder="e.g., என் வகை"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setEditingCategory(null); setFormData({ value: '', label: '', label_tamil: '' }); }} className="flex-1 btn btn-secondary">
+                Clear
+              </button>
+              <button type="submit" disabled={loading} className="flex-1 btn btn-primary">
+                {loading ? 'Saving...' : editingCategory ? 'Update' : 'Add'}
+              </button>
+            </div>
+          </form>
+
+          <div className="border-t dark:border-gray-700 pt-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium">All Categories:</h3>
+              <button onClick={onRefresh} className="text-blue-600 text-sm hover:underline">
+                Refresh
+              </button>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {allCategories.length === 0 ? (
+                <p className="text-gray-500 text-sm">No categories available</p>
+              ) : (
+                allCategories.map(cat => (
+                  <div key={cat.value} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                    <span>{cat.label} ({cat.labelTamil || cat.value})</span>
+                    {cat.id && (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(cat)} className="text-blue-600 hover:text-blue-800 text-sm">
+                          Edit
+                        </button>
+                        <button onClick={() => onDelete(cat.id)} className="text-red-600 hover:text-red-800 text-sm">
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <button onClick={onClose} className="w-full btn btn-secondary mt-4">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

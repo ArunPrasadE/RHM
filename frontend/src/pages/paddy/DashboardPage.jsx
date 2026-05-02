@@ -19,7 +19,6 @@ export default function PaddyDashboardPage() {
         totalAreaCents: fieldsData.reduce((sum, f) => sum + f.area_cents, 0)
       });
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
       setStats({ totalFields: 0, totalAreaCents: 0 });
     } finally {
       setLoading(false);
