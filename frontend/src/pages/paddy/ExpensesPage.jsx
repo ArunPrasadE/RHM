@@ -150,9 +150,134 @@ export default function ExpensesPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+    </div>
+  );
+}
+
+function CategoryManagerModal({ categories, allCategories, onRefresh, onSave, onDelete, onClose }) {
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [formData, setFormData] = useState({
+    value: '',
+    label: '',
+    label_tamil: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave(editingCategory ? { ...formData, id: editingCategory.id } : formData);
+      setEditingCategory(null);
+      setFormData({ value: '', label: '', label_tamil: '' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (category) => {
+    setEditingCategory(category);
+    setFormData({
+      value: category.value,
+      label: category.label,
+      label_tamil: category.label_tamil || ''
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold">Manage Categories (வகைகள்)</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+            <div>
+              <label className="label">Value (API key) *</label>
+              <input
+                type="text"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                className="input"
+                placeholder="e.g., my_category"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Label (English) *</label>
+              <input
+                type="text"
+                value={formData.label}
+                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                className="input"
+                placeholder="e.g., My Category"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Label (Tamil)</label>
+              <input
+                type="text"
+                value={formData.label_tamil}
+                onChange={(e) => setFormData({ ...formData, label_tamil: e.target.value })}
+                className="input"
+                placeholder="e.g., என் வகை"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setEditingCategory(null); setFormData({ value: '', label: '', label_tamil: '' }); }} className="flex-1 btn btn-secondary">
+                Clear
+              </button>
+              <button type="submit" disabled={loading} className="flex-1 btn btn-primary">
+                {loading ? 'Saving...' : editingCategory ? 'Update' : 'Add'}
+              </button>
+            </div>
+          </form>
+
+          <div className="border-t dark:border-gray-700 pt-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium">All Categories:</h3>
+              <button onClick={onRefresh} className="text-blue-600 text-sm hover:underline">
+                Refresh
+              </button>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {allCategories.length === 0 ? (
+                <p className="text-gray-500 text-sm">No categories available</p>
+              ) : (
+                allCategories.map(cat => (
+                  <div key={cat.value} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                    <span>{cat.label} ({cat.labelTamil || cat.value})</span>
+                    {cat.id && (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(cat)} className="text-blue-600 hover:text-blue-800 text-sm">
+                          Edit
+                        </button>
+                        <button onClick={() => onDelete(cat.id)} className="text-red-600 hover:text-red-800 text-sm">
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <button onClick={onClose} className="w-full btn btn-secondary mt-4">
+            Close
+          </button>
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="space-y-6">
@@ -409,6 +534,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
     expense_date: expense?.expense_date || new Date().toISOString().split('T')[0],
     notes: expense?.notes || ''
   });
+  const [selectedFieldIds, setSelectedFieldIds] = useState(() => fields.map(f => f.id));
   const [loading, setLoading] = useState(false);
 
   const selectedCategory = categories.find(c => c.value === formData.category);
@@ -437,8 +563,23 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
     setFormData({ ...formData, category, sequence_number: nextSeq || '' });
   };
 
-  // Calculate total area for split preview (only for new expenses)
-  const totalAreaCents = fields.reduce((sum, f) => sum + f.area_cents, 0);
+  // Calculate total area for split preview (only selected fields)
+  const selectedFields = fields.filter(f => selectedFieldIds.includes(f.id));
+  const totalAreaCents = selectedFields.reduce((sum, f) => sum + f.area_cents, 0);
+
+  const handleToggleAllFields = () => {
+    if (selectedFieldIds.length === fields.length) {
+      setSelectedFieldIds([]);
+    } else {
+      setSelectedFieldIds(fields.map(f => f.id));
+    }
+  };
+
+  const handleToggleField = (fieldId) => {
+    setSelectedFieldIds(prev =>
+      prev.includes(fieldId) ? prev.filter(id => id !== fieldId) : [...prev, fieldId]
+    );
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -492,10 +633,11 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
           notes: formData.notes || ''
         });
       } else {
-        // When adding new, split across fields
+        // When adding new, split across selected fields
         await onSave({
           ...formData,
           total_amount: parseFloat(formData.total_amount),
+          field_ids: selectedFieldIds,
           sequence_number: formData.sequence_number ? parseInt(formData.sequence_number) : null,
           worker_id: formData.worker_id ? parseInt(formData.worker_id) : null
         });
@@ -662,7 +804,7 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
                   {isGrouped ? 'New Split Preview (புதிய பிரிவு முன்னோட்டம்):' : 'Split Preview (பிரிவு முன்னோட்டம்):'}
                 </p>
                 <div className="space-y-1 text-sm">
-                  {fields.map(f => {
+                  {(isGrouped ? fields : selectedFields).map(f => {
                     const fieldAmount = (parseFloat(formData.total_amount) / totalAreaCents * f.area_cents).toFixed(2);
                     return (
                       <div key={f.id} className="flex justify-between text-green-700 dark:text-green-400">
@@ -686,6 +828,42 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               />
             </div>
 
+            {/* Field Selection Checkboxes for split expenses (new only, not direct, not grouped) */}
+            {!isEditing && !isGrouped && !selectedCategory?.isDirectExpense && (
+              <div>
+                <label className="label">Split Among Fields (வயல்களைத் தேர்ந்தெடுக்கவும்)</label>
+                <div className="border dark:border-gray-600 rounded-lg p-3 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer font-medium">
+                    <input
+                      type="checkbox"
+                      checked={selectedFieldIds.length === fields.length}
+                      onChange={handleToggleAllFields}
+                      className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    All Fields (எல்லா வயல்கள்)
+                  </label>
+                  <div className="border-t dark:border-gray-600 pt-2 grid grid-cols-2 gap-1">
+                    {fields.map(f => (
+                      <label key={f.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedFieldIds.includes(f.id)}
+                          onChange={() => handleToggleField(f.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        {f.name}
+                      </label>
+                    ))}
+                  </div>
+                  {selectedFieldIds.length > 0 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {selectedFieldIds.length} of {fields.length} fields selected
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <button type="button" onClick={onClose} className="flex-1 btn btn-secondary">
                 Cancel
@@ -695,131 +873,6 @@ function ExpenseForm({ expense, fields, workers, categories, defaultYear, defaul
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CategoryManagerModal({ categories, allCategories, onRefresh, onSave, onDelete, onClose }) {
-  const [editingCategory, setEditingCategory] = useState(null);
-  const [formData, setFormData] = useState({
-    value: '',
-    label: '',
-    label_tamil: ''
-  });
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await onSave(editingCategory ? { ...formData, id: editingCategory.id } : formData);
-      setEditingCategory(null);
-      setFormData({ value: '', label: '', label_tamil: '' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = (category) => {
-    setEditingCategory(category);
-    setFormData({
-      value: category.value,
-      label: category.label,
-      label_tamil: category.label_tamil || ''
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Manage Categories (வகைகள்)</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-            <div>
-              <label className="label">Value (API key) *</label>
-              <input
-                type="text"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
-                className="input"
-                placeholder="e.g., my_category"
-                required
-              />
-            </div>
-            <div>
-              <label className="label">Label (English) *</label>
-              <input
-                type="text"
-                value={formData.label}
-                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                className="input"
-                placeholder="e.g., My Category"
-                required
-              />
-            </div>
-            <div>
-              <label className="label">Label (Tamil)</label>
-              <input
-                type="text"
-                value={formData.label_tamil}
-                onChange={(e) => setFormData({ ...formData, label_tamil: e.target.value })}
-                className="input"
-                placeholder="e.g., என் வகை"
-              />
-            </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => { setEditingCategory(null); setFormData({ value: '', label: '', label_tamil: '' }); }} className="flex-1 btn btn-secondary">
-                Clear
-              </button>
-              <button type="submit" disabled={loading} className="flex-1 btn btn-primary">
-                {loading ? 'Saving...' : editingCategory ? 'Update' : 'Add'}
-              </button>
-            </div>
-          </form>
-
-          <div className="border-t dark:border-gray-700 pt-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium">All Categories:</h3>
-              <button onClick={onRefresh} className="text-blue-600 text-sm hover:underline">
-                Refresh
-              </button>
-            </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {allCategories.length === 0 ? (
-                <p className="text-gray-500 text-sm">No categories available</p>
-              ) : (
-                allCategories.map(cat => (
-                  <div key={cat.value} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                    <span>{cat.label} ({cat.labelTamil || cat.value})</span>
-                    {cat.id && (
-                      <div className="flex gap-2">
-                        <button onClick={() => handleEdit(cat)} className="text-blue-600 hover:text-blue-800 text-sm">
-                          Edit
-                        </button>
-                        <button onClick={() => onDelete(cat.id)} className="text-red-600 hover:text-red-800 text-sm">
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <button onClick={onClose} className="w-full btn btn-secondary mt-4">
-            Close
-          </button>
         </div>
       </div>
     </div>

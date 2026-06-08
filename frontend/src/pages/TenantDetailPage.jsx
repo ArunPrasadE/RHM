@@ -13,6 +13,7 @@ export default function TenantDetailPage() {
   const [showMoveOutConfirm, setShowMoveOutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [whatsAppLang, setWhatsAppLang] = useState('en');
 
   useEffect(() => {
     fetchTenant();
@@ -74,7 +75,7 @@ export default function TenantDetailPage() {
     }
   };
 
-  const getWhatsAppReminderLink = () => {
+  const getWhatsAppReminderLink = (lang = 'en') => {
     if (!tenant || !tenant.phone || tenant.totalPending <= 0) return null;
 
     const pendingPayments = tenant.payments?.filter(p => !p.is_fully_paid) || [];
@@ -83,9 +84,38 @@ export default function TenantDetailPage() {
     // Sort by due date (oldest first)
     pendingPayments.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 
-    let messageParts = [`Dear ${tenant.name},`];
+    const t = {
+      en: {
+        dear: `Dear ${tenant.name},`,
+        reminder: `Rent reminder for house ${tenant.house_number}`,
+        regularRent: 'Regular Rent',
+        motorBill: 'Motor Bill',
+        waterBill: 'Water Bill',
+        maintenance: 'Maintenance',
+        paid: 'Paid',
+        pending: 'Pending',
+        totalPending: 'Total Pending',
+        please: 'Please pay at the earliest.',
+        thank: 'Thank you.',
+      },
+      ta: {
+        dear: `அன்புள்ள ${tenant.name},`,
+        reminder: `வீடு ${tenant.house_number} க்கு வாடகை நினைவூட்டல்`,
+        regularRent: 'வழக்கமான வாடகை',
+        motorBill: 'மோட்டார் பில்',
+        waterBill: 'தண்ணீர் பில்',
+        maintenance: 'பராமரிப்பு',
+        paid: 'செலுத்தியது',
+        pending: 'நிலுவை',
+        totalPending: 'மொத்த நிலுவை',
+        please: 'தயவுசெய்து விரைவில் செலுத்துங்கள்.',
+        thank: 'நன்றி.',
+      }
+    };
+
+    let messageParts = [t[lang].dear];
     messageParts.push('');
-    messageParts.push(`Rent reminder for house ${tenant.house_number}`);
+    messageParts.push(t[lang].reminder);
     messageParts.push('');
 
     // Show each pending payment with breakdown
@@ -98,48 +128,43 @@ export default function TenantDetailPage() {
       if (pendingPayments.length > 1) {
         messageParts.push(`--- ${formatDate(payment.due_date)} ---`);
       } else {
-        messageParts.push(`Due Date: ${formatDate(payment.due_date)}`);
+        messageParts.push(`${lang === 'ta' ? 'நிலுவை தேதி' : 'Due Date'}: ${formatDate(payment.due_date)}`);
       }
 
-      // Regular rent (only if > 0)
       if (regularRent > 0) {
-        messageParts.push(`Regular Rent: ${formatCurrency(regularRent)}`);
+        messageParts.push(`${t[lang].regularRent}: ${formatCurrency(regularRent)}`);
       }
 
-      // Additional charges breakdown (only if amount > 0)
       if (additions.length > 0) {
         additions.forEach(addition => {
           if (addition.amount > 0) {
-            const label = addition.source_type === 'motor_bill' ? 'Motor Bill' :
-                          addition.source_type === 'water_bill' ? 'Water Bill' :
-                          addition.source_type === 'maintenance' ? 'Maintenance' :
+            const label = addition.source_type === 'motor_bill' ? t[lang].motorBill :
+                          addition.source_type === 'water_bill' ? t[lang].waterBill :
+                          addition.source_type === 'maintenance' ? t[lang].maintenance :
                           addition.description || 'Other';
             messageParts.push(`${label}: ${formatCurrency(addition.amount)}`);
           }
         });
       }
 
-      // Paid amount (only if > 0)
       if (payment.paid_amount > 0) {
-        messageParts.push(`Paid: ${formatCurrency(payment.paid_amount)}`);
+        messageParts.push(`${t[lang].paid}: ${formatCurrency(payment.paid_amount)}`);
       }
 
-      // Pending for this month (only if > 0)
       if (pendingAmount > 0) {
-        messageParts.push(`Pending: ${formatCurrency(pendingAmount)}`);
+        messageParts.push(`${t[lang].pending}: ${formatCurrency(pendingAmount)}`);
       }
       messageParts.push('');
     });
 
-    // Total pending (only if > 0)
     if (tenant.totalPending > 0) {
-      messageParts.push(`*Total Pending: ${formatCurrency(tenant.totalPending)}*`);
+      messageParts.push(`*${t[lang].totalPending}: ${formatCurrency(tenant.totalPending)}*`);
       messageParts.push('');
     }
 
-    messageParts.push('Please pay at the earliest.');
+    messageParts.push(t[lang].please);
     messageParts.push('');
-    messageParts.push('Thank you.');
+    messageParts.push(t[lang].thank);
 
     return generateWhatsAppLink(tenant.phone, messageParts.join('\n'));
   };
@@ -163,7 +188,7 @@ export default function TenantDetailPage() {
     );
   }
 
-  const whatsAppLink = getWhatsAppReminderLink();
+  const whatsAppLink = getWhatsAppReminderLink(whatsAppLang);
 
   return (
     <div className="space-y-6">
@@ -195,19 +220,29 @@ export default function TenantDetailPage() {
             <p className="text-red-800 dark:text-red-300 font-medium">Pending Amount</p>
             <p className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(tenant.totalPending)}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {whatsAppLink && (
-              <a
-                href={whatsAppLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn bg-green-500 text-white hover:bg-green-600 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                Send Reminder
-              </a>
+              <>
+                <select
+                  value={whatsAppLang}
+                  onChange={(e) => setWhatsAppLang(e.target.value)}
+                  className="input text-sm py-1"
+                >
+                  <option value="en">English</option>
+                  <option value="ta">தமிழ்</option>
+                </select>
+                <a
+                  href={whatsAppLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn bg-green-500 text-white hover:bg-green-600 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  {whatsAppLang === 'ta' ? 'நினைவூட்டல் அனுப்பு' : 'Send Reminder'}
+                </a>
+              </>
             )}
             <button
               onClick={() => setShowPaymentForm(true)}

@@ -233,13 +233,19 @@ router.post('/', (req, res) => {
       return;
     }
 
-    // Default behavior: split across all fields
+    // Default behavior: split across fields (all or selected)
     if (!total_amount) {
       return res.status(400).json({ error: 'Total amount is required for split expenses' });
     }
 
-    // Get all active fields with their areas
-    const fields = db.prepare('SELECT id, name, area_cents FROM paddy_fields WHERE is_active = 1').all();
+    // Get fields - either selected ones or all active fields
+    let fields;
+    if (req.body.field_ids && req.body.field_ids.length > 0) {
+      const placeholders = req.body.field_ids.map(() => '?').join(',');
+      fields = db.prepare(`SELECT id, name, area_cents FROM paddy_fields WHERE is_active = 1 AND id IN (${placeholders})`).all(...req.body.field_ids);
+    } else {
+      fields = db.prepare('SELECT id, name, area_cents FROM paddy_fields WHERE is_active = 1').all();
+    }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'No active fields found' });
@@ -372,8 +378,7 @@ router.put('/grouped', (req, res) => {
     });
   } catch (error) {
     console.error('Error updating grouped expenses:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ error: 'Failed to update grouped expenses', details: error.message });
+    res.status(500).json({ error: 'Failed to update grouped expenses' });
   }
 });
 
@@ -391,8 +396,6 @@ router.put('/:id', (req, res) => {
       worker_id,
       notes
     } = req.body;
-
-    console.log('Update expense request:', { id: req.params.id, body: req.body }); // Debug log
 
     const existing = db.prepare('SELECT * FROM paddy_expenses WHERE id = ?').get(req.params.id);
 
@@ -427,12 +430,10 @@ router.put('/:id', (req, res) => {
     );
 
     const updated = db.prepare('SELECT * FROM paddy_expenses WHERE id = ?').get(req.params.id);
-    console.log('Expense updated successfully:', updated); // Debug log
     res.json(updated);
   } catch (error) {
     console.error('Error updating expense:', error);
-    console.error('Error stack:', error.stack); // More detailed error
-    res.status(500).json({ error: 'Failed to update expense', details: error.message });
+    res.status(500).json({ error: 'Failed to update expense' });
   }
 });
 
