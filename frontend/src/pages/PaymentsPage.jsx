@@ -11,6 +11,7 @@ export default function PaymentsPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [whatsAppLang, setWhatsAppLang] = useState('en');
 
   useEffect(() => {
     fetchData();
@@ -75,7 +76,7 @@ export default function PaymentsPage() {
     }
   };
 
-  const getWhatsAppLink = (payment) => {
+  const getWhatsAppLink = (payment, lang = 'en') => {
     if (!payment.tenant_phone) return null;
 
     // Find all pending payments for this tenant (including previous months)
@@ -94,24 +95,55 @@ export default function PaymentsPage() {
     const regularRent = payment.due_amount - additionsTotal;
     const currentPending = payment.due_amount - payment.paid_amount;
 
+    const t = {
+      en: {
+        dear: `Dear ${payment.tenant_name},`,
+        reminder: `Rent reminder for house ${payment.house_number} (Due: ${formatDate(payment.due_date)})`,
+        regularRent: 'Regular Rent',
+        motorBill: 'Motor Bill',
+        waterBill: 'Water Bill',
+        maintenance: 'Maintenance',
+        totalDue: 'Total Due',
+        alreadyPaid: 'Already Paid',
+        previousDues: 'Previous Dues',
+        totalPending: 'Total Pending',
+        please: 'Please pay at the earliest.',
+        thank: 'Thank you.',
+      },
+      ta: {
+        dear: `அன்புள்ள ${payment.tenant_name},`,
+        reminder: `வீடு ${payment.house_number} க்கு வாடகை நினைவூட்டல் (நிலுவை தேதி: ${formatDate(payment.due_date)})`,
+        regularRent: 'வழக்கமான வாடகை',
+        motorBill: 'மோட்டார் பில்',
+        waterBill: 'தண்ணீர் பில்',
+        maintenance: 'பராமரிப்பு',
+        totalDue: 'மொத்த நிலுவை',
+        alreadyPaid: 'ஏற்கனவே செலுத்தியது',
+        previousDues: 'முந்தைய நிலுவை',
+        totalPending: 'மொத்த நிலுவை',
+        please: 'தயவுசெய்து விரைவில் செலுத்துங்கள்.',
+        thank: 'நன்றி.',
+      }
+    };
+
     // Build message parts
-    let messageParts = [`Dear ${payment.tenant_name},`];
+    let messageParts = [t[lang].dear];
     messageParts.push('');
-    messageParts.push(`Rent reminder for house ${payment.house_number} (Due: ${formatDate(payment.due_date)})`);
+    messageParts.push(t[lang].reminder);
     messageParts.push('');
 
     // Regular rent (only if > 0)
     if (regularRent > 0) {
-      messageParts.push(`Regular Rent: ${formatCurrency(regularRent)}`);
+      messageParts.push(`${t[lang].regularRent}: ${formatCurrency(regularRent)}`);
     }
 
     // Additional charges breakdown (only if amount > 0)
     if (additions.length > 0) {
       additions.forEach(addition => {
         if (addition.amount > 0) {
-          const label = addition.source_type === 'motor_bill' ? 'Motor Bill' :
-                        addition.source_type === 'water_bill' ? 'Water Bill' :
-                        addition.source_type === 'maintenance' ? 'Maintenance' :
+          const label = addition.source_type === 'motor_bill' ? t[lang].motorBill :
+                        addition.source_type === 'water_bill' ? t[lang].waterBill :
+                        addition.source_type === 'maintenance' ? t[lang].maintenance :
                         addition.description || 'Other';
           messageParts.push(`${label}: ${formatCurrency(addition.amount)}`);
         }
@@ -121,32 +153,32 @@ export default function PaymentsPage() {
     // Show total due line if there are additions
     if (additionsTotal > 0 && regularRent > 0) {
       messageParts.push(`-----------------------`);
-      messageParts.push(`Total Due: ${formatCurrency(payment.due_amount)}`);
+      messageParts.push(`${t[lang].totalDue}: ${formatCurrency(payment.due_amount)}`);
     }
 
     // Already paid amount (if partial payment made)
     if (payment.paid_amount > 0) {
       messageParts.push('');
-      messageParts.push(`Already Paid: ${formatCurrency(payment.paid_amount)}`);
+      messageParts.push(`${t[lang].alreadyPaid}: ${formatCurrency(payment.paid_amount)}`);
     }
 
     // Previous months pending (if any)
     if (previousPending > 0) {
       messageParts.push('');
-      messageParts.push(`Previous Dues: ${formatCurrency(previousPending)}`);
+      messageParts.push(`${t[lang].previousDues}: ${formatCurrency(previousPending)}`);
     }
 
     // Total pending amount
     const totalPending = currentPending + previousPending;
     if (totalPending > 0) {
       messageParts.push('');
-      messageParts.push(`*Total Pending: ${formatCurrency(totalPending)}*`);
+      messageParts.push(`*${t[lang].totalPending}: ${formatCurrency(totalPending)}*`);
     }
 
     messageParts.push('');
-    messageParts.push('Please pay at the earliest.');
+    messageParts.push(t[lang].please);
     messageParts.push('');
-    messageParts.push('Thank you.');
+    messageParts.push(t[lang].thank);
 
     return generateWhatsAppLink(payment.tenant_phone, messageParts.join('\n'));
   };
@@ -163,7 +195,15 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payments</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <select
+            value={whatsAppLang}
+            onChange={(e) => setWhatsAppLang(e.target.value)}
+            className="input text-sm py-1"
+          >
+            <option value="en">English</option>
+            <option value="ta">தமிழ்</option>
+          </select>
           <button
             onClick={handleGenerateRent}
             disabled={generating}
@@ -243,7 +283,7 @@ export default function PaymentsPage() {
               {payments.map((payment) => {
                 const isOverdue = !payment.is_fully_paid && new Date(payment.due_date) < new Date();
                 const daysOverdue = payment.days_overdue ? Math.floor(payment.days_overdue) : 0;
-                const whatsAppLink = getWhatsAppLink(payment);
+                const whatsAppLink = getWhatsAppLink(payment, whatsAppLang);
 
                 return (
                   <tr key={payment.id} className={`border-b dark:border-gray-700 last:border-0 ${isOverdue ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
